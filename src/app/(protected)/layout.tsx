@@ -18,6 +18,9 @@ export default function ProtectedLayout({
               <Link href="/" className="hover:text-neutral-900 dark:hover:text-white">
                 Dashboard
               </Link>
+              <Link href="/checkin" className="hover:text-neutral-900 dark:hover:text-white">
+                Check-in
+              </Link>
               <Link href="/okrs" className="hover:text-neutral-900 dark:hover:text-white">
                 Alineación
               </Link>
