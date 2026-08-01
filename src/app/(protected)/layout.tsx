@@ -30,6 +30,9 @@ export default function ProtectedLayout({
               <Link href="/solop" className="hover:text-neutral-900 dark:hover:text-white">
                 SOLOP
               </Link>
+              <Link href="/informes" className="hover:text-neutral-900 dark:hover:text-white">
+                Informes
+              </Link>
             </nav>
           </div>
           <SignOutButton />

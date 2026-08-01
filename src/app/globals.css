@@ -24,3 +24,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* "Descargar PDF" usa el diálogo de impresión del navegador: sacamos la
+   navegación y los controles para que el documento salga limpio. */
+@media print {
+  header,
+  nav {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+}
