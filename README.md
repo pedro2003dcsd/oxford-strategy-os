@@ -95,3 +95,4 @@ Next.js 16 + Supabase (Postgres).
 - Producción: cuando se quiera pasar de local a Supabase Cloud, correr
   `npx supabase link` y `npx supabase db push`, y actualizar las env vars con
   las credenciales del proyecto cloud.
+
