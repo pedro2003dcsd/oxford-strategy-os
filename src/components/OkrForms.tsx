@@ -2,15 +2,13 @@
 
 import { useActionState } from "react";
 import {
-  createHito,
-  createKeyResult,
   createOkrAnual,
   createOkrTrimestral,
   createPilar,
   type FormActionState,
 } from "@/app/(protected)/okrs/actions";
-import { AREAS, TIPOS_MEDICION, TRIMESTRES } from "@/lib/types";
-import type { KeyResult, OkrAnual, OkrTrimestral, Pilar } from "@/lib/types";
+import { AREAS, TRIMESTRES } from "@/lib/types";
+import type { OkrAnual, Pilar } from "@/lib/types";
 
 const inputClass =
   "w-full rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20";
@@ -150,125 +148,6 @@ export function NewOkrTrimestralForm({ okrsAnuales }: { okrsAnuales: OkrAnual[] 
       <ErrorText state={state} />
       <button type="submit" disabled={pending} className={submitClass}>
         {pending ? "Creando…" : "Crear OKR trimestral"}
-      </button>
-    </form>
-  );
-}
-
-export function NewKeyResultForm({
-  okrsTrimestrales,
-}: {
-  okrsTrimestrales: OkrTrimestral[];
-}) {
-  const [state, formAction, pending] = useActionState<FormActionState, FormData>(
-    createKeyResult,
-    undefined
-  );
-  return (
-    <form action={formAction} className="space-y-2">
-      <div className="space-y-1">
-        <label className={labelClass}>OKR trimestral</label>
-        <select name="okr_trimestral_id" required className={inputClass} defaultValue="">
-          <option value="" disabled>
-            Elegí un OKR trimestral
-          </option>
-          {okrsTrimestrales.map((o) => (
-            <option key={o.id} value={o.id}>
-              [{o.area}] {o.titulo} ({o.trimestre} {o.anio})
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="space-y-1">
-        <label className={labelClass}>Título del KR</label>
-        <input name="titulo" required className={inputClass} />
-      </div>
-      <div className="space-y-1">
-        <label className={labelClass}>Tipo de medición</label>
-        <select name="tipo_medicion" required className={inputClass} defaultValue="">
-          <option value="" disabled>
-            Elegí un tipo
-          </option>
-          {TIPOS_MEDICION.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <label className={labelClass}>Valor inicial</label>
-          <input name="valor_inicial" type="number" step="any" defaultValue={0} className={inputClass} />
-        </div>
-        <div className="space-y-1">
-          <label className={labelClass}>Meta (ignorado si es &quot;hitos&quot;)</label>
-          <input name="valor_meta" type="number" step="any" className={inputClass} />
-        </div>
-      </div>
-      <div className="space-y-1">
-        <label className={labelClass}>Cliente asociado (opcional)</label>
-        <input name="cliente_asociado" className={inputClass} />
-      </div>
-      <div className="space-y-1">
-        <label className={labelClass}>Margen de utilidad esperado (%)</label>
-        <input
-          name="margen_utilidad_esperado"
-          type="number"
-          step="any"
-          defaultValue={65}
-          className={inputClass}
-        />
-      </div>
-      <ErrorText state={state} />
-      <button type="submit" disabled={pending} className={submitClass}>
-        {pending ? "Creando…" : "Crear Key Result"}
-      </button>
-    </form>
-  );
-}
-
-export function NewHitoForm({ keyResults }: { keyResults: KeyResult[] }) {
-  const [state, formAction, pending] = useActionState<FormActionState, FormData>(
-    createHito,
-    undefined
-  );
-  const krsHitos = keyResults.filter((kr) => kr.tipo_medicion === "hitos");
-
-  if (krsHitos.length === 0) {
-    return (
-      <p className="text-sm text-neutral-500">
-        Creá primero un Key Result de tipo &quot;hitos&quot; para poder agregarle hitos.
-      </p>
-    );
-  }
-
-  return (
-    <form action={formAction} className="space-y-2">
-      <div className="space-y-1">
-        <label className={labelClass}>Key Result</label>
-        <select name="kr_id" required className={inputClass} defaultValue="">
-          <option value="" disabled>
-            Elegí un KR
-          </option>
-          {krsHitos.map((kr) => (
-            <option key={kr.id} value={kr.id}>
-              {kr.titulo}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="space-y-1">
-        <label className={labelClass}>Título del hito</label>
-        <input name="titulo" required className={inputClass} />
-      </div>
-      <div className="space-y-1">
-        <label className={labelClass}>Orden</label>
-        <input name="orden" type="number" defaultValue={0} className={inputClass} />
-      </div>
-      <ErrorText state={state} />
-      <button type="submit" disabled={pending} className={submitClass}>
-        {pending ? "Creando…" : "Crear hito"}
       </button>
     </form>
   );

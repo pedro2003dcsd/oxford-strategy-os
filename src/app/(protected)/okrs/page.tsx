@@ -1,13 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SemaforoBadge } from "@/components/SemaforoBadge";
-import {
-  NewHitoForm,
-  NewKeyResultForm,
-  NewOkrAnualForm,
-  NewOkrTrimestralForm,
-  NewPilarForm,
-} from "@/components/OkrForms";
+import { NewOkrAnualForm, NewOkrTrimestralForm, NewPilarForm } from "@/components/OkrForms";
+import { Collapsible } from "@/components/Collapsible";
+import { KrModal } from "@/components/KrModal";
 import { hasAlertaRentabilidad } from "@/lib/kr-logic";
 import type {
   HitoKr,
@@ -67,70 +63,100 @@ export default async function OkrsPage() {
     krsPorTrim.get(kr.okr_trimestral_id)!.push(kr);
   }
 
+  function renderKr(kr: (typeof keyResultsList)[number]) {
+    return (
+      <div key={kr.id} className="flex items-center gap-2 py-1 text-sm">
+        <Link href={`/kr/${kr.id}`} className="truncate hover:underline">
+          {kr.titulo}
+        </Link>
+        <SemaforoBadge estado={kr.estado_semaforo} compact />
+        {hasAlertaRentabilidad(kr) && (
+          <span className="text-xs text-red-600" title="Alerta de rentabilidad">
+            ⚠
+          </span>
+        )}
+        <KrModal
+          kr={kr}
+          hitos={kr.hitos_kr}
+          triggerLabel="Editar"
+          triggerClassName="ml-auto shrink-0 rounded-md px-2 py-0.5 text-xs text-neutral-400 transition hover:bg-black/5 hover:text-neutral-900 dark:hover:bg-white/10 dark:hover:text-white"
+        />
+      </div>
+    );
+  }
+
   function renderOkrTrimestral(ot: OkrTrimestral) {
     const krs = krsPorTrim.get(ot.id) ?? [];
     return (
-      <li key={ot.id} className="space-y-1 border-l border-black/10 pl-3 dark:border-white/10">
-        <p className="text-sm font-medium">
-          [{ot.area}] {ot.titulo}{" "}
-          <span className="font-normal text-neutral-500">
-            · {ot.trimestre} {ot.anio} · {ot.responsable}
-          </span>
-        </p>
+      <Collapsible
+        key={ot.id}
+        level={2}
+        defaultOpen
+        summary={
+          <p className="text-sm font-medium">
+            <span className="mr-1.5 rounded bg-black/5 px-1.5 py-0.5 text-xs font-semibold dark:bg-white/10">
+              {ot.area}
+            </span>
+            {ot.titulo}{" "}
+            <span className="font-normal text-neutral-500">
+              · {ot.trimestre} {ot.anio} · {ot.responsable}
+            </span>
+          </p>
+        }
+      >
         {krs.length === 0 ? (
-          <p className="pl-3 text-xs text-neutral-400">Sin Key Results todavía.</p>
+          <p className="py-1 text-xs text-neutral-400">Sin Key Results todavía.</p>
         ) : (
-          <ul className="space-y-1 pl-3">
-            {krs.map((kr) => (
-              <li key={kr.id} className="flex items-center gap-2 text-sm">
-                <Link href={`/kr/${kr.id}`} className="hover:underline">
-                  {kr.titulo}
-                </Link>
-                <SemaforoBadge estado={kr.estado_semaforo} compact />
-                {hasAlertaRentabilidad(kr) && (
-                  <span className="text-xs text-red-600" title="Alerta de rentabilidad">
-                    ⚠
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
+          krs.map(renderKr)
         )}
-      </li>
+      </Collapsible>
     );
   }
 
   function renderOkrAnual(oa: OkrAnual) {
     const trims = okrsTrimPorAnual.get(oa.id) ?? [];
     return (
-      <li key={oa.id} className="space-y-2 border-l border-black/10 pl-3 dark:border-white/10">
-        <p className="text-sm font-semibold">
-          {oa.titulo}{" "}
-          {oa.responsable && (
-            <span className="font-normal text-neutral-500">· {oa.responsable}</span>
-          )}
-        </p>
+      <Collapsible
+        key={oa.id}
+        level={1}
+        defaultOpen
+        summary={
+          <p className="text-sm font-semibold">
+            {oa.titulo}{" "}
+            {oa.responsable && (
+              <span className="font-normal text-neutral-500">· {oa.responsable}</span>
+            )}
+          </p>
+        }
+      >
         {trims.length === 0 ? (
-          <p className="pl-3 text-xs text-neutral-400">Sin OKRs trimestrales alineados.</p>
+          <p className="py-1 text-xs text-neutral-400">
+            Sin OKRs trimestrales alineados.
+          </p>
         ) : (
-          <ul className="space-y-2">{trims.map(renderOkrTrimestral)}</ul>
+          trims.map(renderOkrTrimestral)
         )}
-      </li>
+      </Collapsible>
     );
   }
 
   return (
-    <div className="space-y-10">
-      <div>
-        <h1 className="text-xl font-semibold">Alineación estratégica</h1>
-        <p className="text-sm text-neutral-500">
-          Pilares → OKRs anuales → OKRs trimestrales por área → Key Results.
-          La alineación es flexible: un OKR trimestral puede crearse sin OKR
-          anual asignado todavía.
-        </p>
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold">Alineación estratégica</h1>
+          <p className="text-sm text-neutral-500">
+            Pilares → OKRs anuales → OKRs trimestrales por área → Key Results.
+          </p>
+        </div>
+        <KrModal
+          okrsTrimestrales={okrsTrimestralesList}
+          triggerLabel="+ Nuevo Key Result"
+          triggerClassName="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+        />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3">
         <details className="rounded-lg border border-black/10 p-4 dark:border-white/10">
           <summary className="cursor-pointer text-sm font-semibold">Nuevo pilar</summary>
           <div className="mt-3">
@@ -151,58 +177,57 @@ export default async function OkrsPage() {
             <NewOkrTrimestralForm okrsAnuales={okrsAnualesList} />
           </div>
         </details>
-        <details className="rounded-lg border border-black/10 p-4 dark:border-white/10">
-          <summary className="cursor-pointer text-sm font-semibold">Nuevo Key Result</summary>
-          <div className="mt-3">
-            <NewKeyResultForm okrsTrimestrales={okrsTrimestralesList} />
-          </div>
-        </details>
-        <details className="rounded-lg border border-black/10 p-4 dark:border-white/10">
-          <summary className="cursor-pointer text-sm font-semibold">Nuevo hito</summary>
-          <div className="mt-3">
-            <NewHitoForm keyResults={keyResultsList} />
-          </div>
-        </details>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {pilaresList.length === 0 && (
           <p className="text-sm text-neutral-500">Todavía no hay pilares cargados.</p>
         )}
         {pilaresList.map((pilar) => {
           const oas = okrsAnualesPorPilar.get(pilar.id) ?? [];
           return (
-            <section key={pilar.id} className="space-y-3 rounded-lg border border-black/10 p-4 dark:border-white/10">
-              <div>
-                <h2 className="text-base font-semibold">{pilar.nombre}</h2>
-                {pilar.descripcion && (
-                  <p className="text-sm text-neutral-500">{pilar.descripcion}</p>
+            <section
+              key={pilar.id}
+              className="rounded-lg border border-black/10 p-4 dark:border-white/10"
+            >
+              <Collapsible
+                defaultOpen
+                summary={
+                  <div>
+                    <h2 className="text-base font-semibold">{pilar.nombre}</h2>
+                    {pilar.descripcion && (
+                      <p className="text-sm text-neutral-500">{pilar.descripcion}</p>
+                    )}
+                  </div>
+                }
+              >
+                {oas.length === 0 ? (
+                  <p className="py-1 text-xs text-neutral-400">
+                    Sin OKRs anuales todavía.
+                  </p>
+                ) : (
+                  oas.map(renderOkrAnual)
                 )}
-              </div>
-              {oas.length === 0 ? (
-                <p className="text-xs text-neutral-400">Sin OKRs anuales todavía.</p>
-              ) : (
-                <ul className="space-y-3">{oas.map(renderOkrAnual)}</ul>
-              )}
+              </Collapsible>
             </section>
           );
         })}
 
         {okrsAnualesSinPilar.length > 0 && (
-          <section className="space-y-3 rounded-lg border border-dashed border-black/20 p-4 dark:border-white/20">
-            <h2 className="text-base font-semibold text-neutral-500">
+          <section className="rounded-lg border border-dashed border-black/20 p-4 dark:border-white/20">
+            <h2 className="mb-2 text-base font-semibold text-neutral-500">
               OKRs anuales sin pilar asignado
             </h2>
-            <ul className="space-y-3">{okrsAnualesSinPilar.map(renderOkrAnual)}</ul>
+            <div className="space-y-2">{okrsAnualesSinPilar.map(renderOkrAnual)}</div>
           </section>
         )}
 
         {okrsTrimSinAlinear.length > 0 && (
-          <section className="space-y-3 rounded-lg border border-dashed border-black/20 p-4 dark:border-white/20">
-            <h2 className="text-base font-semibold text-neutral-500">
+          <section className="rounded-lg border border-dashed border-black/20 p-4 dark:border-white/20">
+            <h2 className="mb-2 text-base font-semibold text-neutral-500">
               OKRs trimestrales sin alinear a un OKR anual
             </h2>
-            <ul className="space-y-3">{okrsTrimSinAlinear.map(renderOkrTrimestral)}</ul>
+            <div className="space-y-2">{okrsTrimSinAlinear.map(renderOkrTrimestral)}</div>
           </section>
         )}
       </div>
