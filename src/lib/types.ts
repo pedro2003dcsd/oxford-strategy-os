@@ -79,6 +79,14 @@ export interface HitoKr {
   created_at: string;
 }
 
+export interface CompromisoLom {
+  id: string;
+  kr_id: string;
+  descripcion: string;
+  cumplido: boolean;
+  creado_at: string;
+}
+
 export interface CheckIn {
   id: string;
   kr_id: string;

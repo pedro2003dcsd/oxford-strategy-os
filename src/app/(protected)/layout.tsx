@@ -24,6 +24,9 @@ export default function ProtectedLayout({
               <Link href="/okrs" className="hover:text-neutral-900 dark:hover:text-white">
                 Alineación
               </Link>
+              <Link href="/lom" className="hover:text-neutral-900 dark:hover:text-white">
+                LOM
+              </Link>
             </nav>
           </div>
           <SignOutButton />
