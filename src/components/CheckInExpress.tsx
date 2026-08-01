@@ -7,6 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { submitCheckInExpress, type ExpressState } from "@/app/(protected)/checkin/actions";
 import { SemaforoBadge } from "@/components/SemaforoBadge";
+import { RentabilityBadge } from "@/components/RentabilityBadge";
 import { TrendChart } from "@/components/TrendChart";
 import { formatValor, progresoPct } from "@/lib/kr-logic";
 import type { CheckIn, KeyResultCompleto, Semaforo } from "@/lib/types";
@@ -341,7 +342,10 @@ export function CheckInExpress({
           <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
             {kr.okr_trimestral?.area}
           </p>
-          <SemaforoBadge estado={kr.estado_semaforo} compact />
+          <span className="flex items-center gap-1.5">
+            <RentabilityBadge kr={kr} />
+            <SemaforoBadge estado={kr.estado_semaforo} compact />
+          </span>
         </div>
         <p className="text-sm font-medium leading-snug">{kr.titulo}</p>
 

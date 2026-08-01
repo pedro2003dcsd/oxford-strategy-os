@@ -10,6 +10,7 @@ import {
   type CompromisoState,
 } from "@/app/(protected)/lom/actions";
 import { SemaforoBadge } from "@/components/SemaforoBadge";
+import { RentabilityBadge } from "@/components/RentabilityBadge";
 import { Sparkline } from "@/components/Sparkline";
 import { formatValor, hasAlertaRentabilidad } from "@/lib/kr-logic";
 import { generarResumenLom } from "@/lib/resumen-lom";
@@ -328,7 +329,10 @@ export function LomClient({
                     </span>
                   )}
                 </p>
-                <SemaforoBadge estado={kr.estado_semaforo} />
+                <span className="flex items-center gap-1.5">
+                  <RentabilityBadge kr={kr} />
+                  <SemaforoBadge estado={kr.estado_semaforo} />
+                </span>
               </div>
 
               <Link

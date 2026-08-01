@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SemaforoBadge } from "@/components/SemaforoBadge";
+import { RentabilityBadge } from "@/components/RentabilityBadge";
 import type { KeyResultCompleto } from "@/lib/types";
 import { formatValor, hasAlertaRentabilidad, progresoPct } from "@/lib/kr-logic";
 
@@ -13,7 +14,10 @@ export function KrCard({ kr }: { kr: KeyResultCompleto }) {
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium leading-snug">{kr.titulo}</p>
-        <SemaforoBadge estado={kr.estado_semaforo} compact />
+        <span className="flex items-center gap-1.5">
+          <RentabilityBadge kr={kr} />
+          <SemaforoBadge estado={kr.estado_semaforo} compact />
+        </span>
       </div>
 
       {kr.okr_trimestral && (

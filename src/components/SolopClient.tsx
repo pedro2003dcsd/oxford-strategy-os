@@ -1,0 +1,535 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useActionState } from "react";
+import Link from "next/link";
+import clsx from "clsx";
+import { upsertProyectoSolop, type SolopState } from "@/app/(protected)/solop/actions";
+import {
+  advertenciaHoras,
+  costoPorHora,
+  ESTADO_FINANCIERO_LABELS,
+  estadoFinanciero,
+  facturacionPorHora,
+  margenReal,
+  META_MARGEN,
+  ratioHoras,
+  UMBRAL_ALERTA_HORAS,
+  UMBRAL_SCOPE_CREEP,
+  type EstadoFinanciero,
+} from "@/lib/solop-logic";
+import { TIPOS_CONTRATO } from "@/lib/types";
+import type { KeyResult, ProyectoSolop } from "@/lib/types";
+
+const META_CLIENTES = 20;
+
+const inputClass =
+  "w-full rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20";
+const labelClass = "text-xs font-medium text-neutral-500";
+
+const fmtPesos = (n: number) =>
+  new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(n);
+
+function EstadoBadge({ estado }: { estado: EstadoFinanciero | null }) {
+  if (!estado) return <span className="text-xs text-neutral-400">Sin datos</span>;
+  return (
+    <span
+      className={clsx(
+        "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
+        estado === "saludable" &&
+          "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+        estado === "en_alerta" && "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+        estado === "en_perdida" && "bg-red-500/10 text-red-700 dark:text-red-400"
+      )}
+    >
+      {ESTADO_FINANCIERO_LABELS[estado]}
+    </span>
+  );
+}
+
+function HorasBar({ proyecto }: { proyecto: ProyectoSolop }) {
+  const ratio = ratioHoras(proyecto);
+  if (ratio === null)
+    return <span className="text-xs text-neutral-400">Sin presupuesto</span>;
+
+  const pct = Math.min(100, Math.round(ratio * 100));
+  return (
+    <div className="space-y-1">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+        <div
+          className={clsx(
+            "h-full rounded-full transition-all",
+            ratio >= UMBRAL_SCOPE_CREEP
+              ? "bg-red-500"
+              : ratio >= UMBRAL_ALERTA_HORAS
+                ? "bg-amber-500"
+                : "bg-emerald-500"
+          )}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="text-xs text-neutral-500">
+        {proyecto.horas_consumidas} / {proyecto.horas_presupuestadas} hs ({pct}%)
+      </p>
+    </div>
+  );
+}
+
+function ProyectoModal({
+  proyecto,
+  krs,
+  onClose,
+}: {
+  proyecto: ProyectoSolop | null;
+  krs: KeyResult[];
+  onClose: () => void;
+}) {
+  const isEdit = !!proyecto;
+  const [preview, setPreview] = useState({
+    horas_consumidas: proyecto?.horas_consumidas ?? 0,
+    facturacion_total: proyecto?.facturacion_total ?? 0,
+    costo_operativo: proyecto?.costo_operativo ?? 0,
+  });
+
+  const boundAction = upsertProyectoSolop.bind(null, proyecto?.id ?? null);
+  const [state, formAction, pending] = useActionState<SolopState, FormData>(
+    async (prev, formData) => {
+      const result = await boundAction(prev, formData);
+      if (!result?.error) onClose();
+      return result;
+    },
+    undefined
+  );
+
+  const previewProyecto = {
+    ...(proyecto ?? {
+      id: "",
+      cliente: "",
+      tipo_contrato: "Fee" as const,
+      kr_id: null,
+      horas_presupuestadas: 0,
+      creado_at: "",
+      actualizado_at: "",
+    }),
+    ...preview,
+  } as ProyectoSolop;
+
+  const margen = margenReal(previewProyecto);
+  const cph = costoPorHora(previewProyecto);
+  const fph = facturacionPorHora(previewProyecto);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-black/10 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-neutral-900">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold">
+            {isEdit ? `Sincronizar SOLOP — ${proyecto.cliente}` : "Nuevo proyecto SOLOP"}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form action={formAction} className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className={labelClass}>Cliente / Proyecto</label>
+              <input
+                name="cliente"
+                required
+                defaultValue={proyecto?.cliente ?? ""}
+                className={inputClass}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className={labelClass}>Tipo de contrato</label>
+              <select
+                name="tipo_contrato"
+                required
+                defaultValue={proyecto?.tipo_contrato ?? "Fee"}
+                className={inputClass}
+              >
+                {TIPOS_CONTRATO.map((t) => (
+                  <option key={t} value={t}>
+                    {t === "AdHoc" ? "Ad-Hoc" : t}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className={labelClass}>KR asociado (opcional)</label>
+            <select
+              name="kr_id"
+              defaultValue={proyecto?.kr_id ?? ""}
+              className={inputClass}
+            >
+              <option value="">Sin KR asociado</option>
+              {krs.map((kr) => (
+                <option key={kr.id} value={kr.id}>
+                  {kr.titulo}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-neutral-400">
+              Si lo asociás, el margen real de este proyecto se sincroniza con el
+              KR y dispara las alertas de rentabilidad.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className={labelClass}>Horas presupuestadas</label>
+              <input
+                name="horas_presupuestadas"
+                type="number"
+                step="any"
+                min="0"
+                defaultValue={proyecto?.horas_presupuestadas ?? 0}
+                className={inputClass}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className={labelClass}>Horas consumidas</label>
+              <input
+                name="horas_consumidas"
+                type="number"
+                step="any"
+                min="0"
+                defaultValue={proyecto?.horas_consumidas ?? 0}
+                onChange={(e) =>
+                  setPreview((p) => ({ ...p, horas_consumidas: Number(e.target.value) }))
+                }
+                className={inputClass}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className={labelClass}>Facturación total ($)</label>
+              <input
+                name="facturacion_total"
+                type="number"
+                step="any"
+                min="0"
+                defaultValue={proyecto?.facturacion_total ?? 0}
+                onChange={(e) =>
+                  setPreview((p) => ({ ...p, facturacion_total: Number(e.target.value) }))
+                }
+                className={inputClass}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className={labelClass}>Costo operativo ($)</label>
+              <input
+                name="costo_operativo"
+                type="number"
+                step="any"
+                min="0"
+                defaultValue={proyecto?.costo_operativo ?? 0}
+                onChange={(e) =>
+                  setPreview((p) => ({ ...p, costo_operativo: Number(e.target.value) }))
+                }
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-black/10 bg-black/[0.02] p-3 text-sm dark:border-white/10 dark:bg-white/5">
+            <p className="mb-2 text-xs font-semibold text-neutral-500">
+              Conciliación por hora-hombre
+            </p>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-xs text-neutral-500">Facturación/h</p>
+                <p className="font-medium">{fph !== null ? fmtPesos(fph) : "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral-500">Costo/h</p>
+                <p className="font-medium">{cph !== null ? fmtPesos(cph) : "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral-500">Margen real</p>
+                <p
+                  className={clsx(
+                    "font-semibold",
+                    margen === null
+                      ? ""
+                      : margen >= META_MARGEN
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : margen >= 50
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-red-600 dark:text-red-400"
+                  )}
+                >
+                  {margen !== null ? `${margen}%` : "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-black/15 px-3 py-1.5 text-sm font-medium dark:border-white/20"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+            >
+              {pending ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear proyecto"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export function SolopClient({
+  proyectos,
+  krs,
+}: {
+  proyectos: ProyectoSolop[];
+  krs: KeyResult[];
+}) {
+  const [tipoFiltro, setTipoFiltro] = useState<"Todos" | "Fee" | "AdHoc">("Todos");
+  const [estadoFiltro, setEstadoFiltro] = useState<"Todos" | EstadoFinanciero>("Todos");
+  const [modal, setModal] = useState<{ abierto: boolean; proyecto: ProyectoSolop | null }>({
+    abierto: false,
+    proyecto: null,
+  });
+
+  const krPorId = useMemo(() => new Map(krs.map((k) => [k.id, k])), [krs]);
+
+  const conMargen = proyectos.filter((p) => margenReal(p) !== null);
+  const promedioUB =
+    conMargen.length === 0
+      ? null
+      : Math.round(
+          (conMargen.reduce((acc, p) => acc + (margenReal(p) ?? 0), 0) /
+            conMargen.length) *
+            10
+        ) / 10;
+  const clientesIntegrales = new Set(
+    proyectos
+      .filter((p) => (margenReal(p) ?? 0) >= META_MARGEN)
+      .map((p) => p.cliente)
+  ).size;
+  const conScopeCreep = proyectos.filter(
+    (p) => (ratioHoras(p) ?? 0) >= UMBRAL_SCOPE_CREEP
+  ).length;
+
+  const visibles = proyectos.filter((p) => {
+    if (tipoFiltro !== "Todos" && p.tipo_contrato !== tipoFiltro) return false;
+    if (estadoFiltro !== "Todos" && estadoFinanciero(p) !== estadoFiltro) return false;
+    return true;
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold">Torre de Control SOLOP</h1>
+          <p className="text-sm text-neutral-500">
+            Rentabilidad por cliente/proyecto — carga manual desde SOLOP.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setModal({ abierto: true, proyecto: null })}
+          className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+        >
+          + Nuevo proyecto
+        </button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div
+          className={clsx(
+            "rounded-xl border p-4",
+            promedioUB === null
+              ? "border-black/10 dark:border-white/10"
+              : promedioUB >= META_MARGEN
+                ? "border-emerald-500/30 bg-emerald-500/5"
+                : promedioUB >= 50
+                  ? "border-amber-500/30 bg-amber-500/5"
+                  : "border-red-500/30 bg-red-500/5"
+          )}
+        >
+          <p className="text-xs font-medium text-neutral-500">
+            Utilidad bruta promedio (meta &gt;{META_MARGEN}%)
+          </p>
+          <p className="text-2xl font-semibold">
+            {promedioUB !== null ? `${promedioUB}%` : "—"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-4">
+          <p className="text-xs font-medium text-neutral-500">
+            Clientes integrales activos (meta {META_CLIENTES})
+          </p>
+          <p className="text-2xl font-semibold">
+            {clientesIntegrales}{" "}
+            <span className="text-sm font-normal text-neutral-500">
+              / {META_CLIENTES}
+            </span>
+          </p>
+        </div>
+        <div
+          className={clsx(
+            "rounded-xl border p-4",
+            conScopeCreep > 0
+              ? "border-red-500/30 bg-red-500/5"
+              : "border-black/10 dark:border-white/10"
+          )}
+        >
+          <p className="text-xs font-medium text-neutral-500">
+            Proyectos con riesgo de scope creep
+          </p>
+          <p className="text-2xl font-semibold">{conScopeCreep}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <select
+          value={tipoFiltro}
+          onChange={(e) => setTipoFiltro(e.target.value as typeof tipoFiltro)}
+          className="rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20 dark:bg-neutral-900"
+        >
+          <option value="Todos">Todos los contratos</option>
+          <option value="Fee">Fee</option>
+          <option value="AdHoc">Ad-Hoc</option>
+        </select>
+        <select
+          value={estadoFiltro}
+          onChange={(e) => setEstadoFiltro(e.target.value as typeof estadoFiltro)}
+          className="rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20 dark:bg-neutral-900"
+        >
+          <option value="Todos">Todos los estados</option>
+          <option value="saludable">Saludable (&ge;{META_MARGEN}%)</option>
+          <option value="en_alerta">En alerta (50-{META_MARGEN}%)</option>
+          <option value="en_perdida">En pérdida (&lt;50%)</option>
+        </select>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-black/10 dark:border-white/10">
+        <table className="w-full min-w-[720px] text-sm">
+          <thead>
+            <tr className="border-b border-black/10 text-left text-xs uppercase tracking-wide text-neutral-500 dark:border-white/10">
+              <th className="px-4 py-3">Cliente / Proyecto</th>
+              <th className="px-4 py-3">Tipo</th>
+              <th className="px-4 py-3">KR asociado</th>
+              <th className="px-4 py-3 min-w-[160px]">Horas</th>
+              <th className="px-4 py-3">Margen</th>
+              <th className="px-4 py-3">Estado</th>
+              <th className="px-4 py-3" />
+            </tr>
+          </thead>
+          <tbody>
+            {visibles.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-neutral-500">
+                  No hay proyectos para este filtro.
+                </td>
+              </tr>
+            )}
+            {visibles.map((p) => {
+              const margen = margenReal(p);
+              const kr = p.kr_id ? krPorId.get(p.kr_id) : null;
+              const advertencia = advertenciaHoras(p);
+              return (
+                <tr
+                  key={p.id}
+                  className="border-b border-black/5 last:border-0 dark:border-white/5"
+                >
+                  <td className="px-4 py-3">
+                    <p className="font-medium">{p.cliente}</p>
+                    {advertencia && (
+                      <p className="text-xs text-red-600 dark:text-red-400">
+                        ⚠ {advertencia}
+                      </p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-500">
+                    {p.tipo_contrato === "AdHoc" ? "Ad-Hoc" : "Fee"}
+                  </td>
+                  <td className="max-w-[200px] px-4 py-3">
+                    {kr ? (
+                      <Link
+                        href={`/kr/${kr.id}`}
+                        className="block truncate text-xs hover:underline"
+                        title={kr.titulo}
+                      >
+                        {kr.titulo}
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-neutral-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <HorasBar proyecto={p} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={clsx(
+                        "font-semibold",
+                        margen === null
+                          ? "text-neutral-400"
+                          : margen >= META_MARGEN
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : margen >= 50
+                              ? "text-amber-600 dark:text-amber-400"
+                              : "text-red-600 dark:text-red-400"
+                      )}
+                    >
+                      {margen !== null ? `${margen}%` : "—"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <EstadoBadge estado={estadoFinanciero(p)} />
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setModal({ abierto: true, proyecto: p })}
+                      className="rounded-md border border-black/15 px-2.5 py-1 text-xs font-medium dark:border-white/20"
+                    >
+                      Sincronizar
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {modal.abierto && (
+        <ProyectoModal
+          proyecto={modal.proyecto}
+          krs={krs}
+          onClose={() => setModal({ abierto: false, proyecto: null })}
+        />
+      )}
+    </div>
+  );
+}

@@ -79,6 +79,22 @@ export interface HitoKr {
   created_at: string;
 }
 
+export const TIPOS_CONTRATO = ["Fee", "AdHoc"] as const;
+export type TipoContrato = (typeof TIPOS_CONTRATO)[number];
+
+export interface ProyectoSolop {
+  id: string;
+  cliente: string;
+  tipo_contrato: TipoContrato;
+  kr_id: string | null;
+  horas_presupuestadas: number;
+  horas_consumidas: number;
+  facturacion_total: number;
+  costo_operativo: number;
+  creado_at: string;
+  actualizado_at: string;
+}
+
 export interface CompromisoLom {
   id: string;
   kr_id: string;
