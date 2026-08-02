@@ -82,8 +82,13 @@ de correrla en local. Las tres ya están aplicadas en producción.
 
 ## Pendientes / decisiones tomadas
 
-- **Datos de ejemplo:** hay KRs marcados `[DEMO]` y proyectos SOLOP de prueba
-  (Acme, Globex, Initech). Reemplazarlos cuando el equipo cargue lo real.
+- **Datos de demo Q3 2026:** `supabase/seed.sql` tiene el set completo que se
+  usa para las presentaciones (3 pilares, 2 OKRs anuales, 6 áreas con sus KRs,
+  historial de check-ins, y los proyectos SOLOP Batistella y Ueno). Está
+  aplicado en local y en la nube (2 de agosto de 2026), y reemplazó a los
+  viejos datos `[DEMO]` de Acme/Globex/Initech. El archivo es idempotente:
+  borra el set anterior y lo vuelve a cargar. Para volver a aplicarlo en la
+  nube, pegarlo en el SQL editor de Supabase.
 - **Margen SOLOP: carga manual.** Se decidió cargar el margen a mano desde la
   Torre de Control. El campo queda listo para integrar una API o export de
   SOLOP más adelante.
