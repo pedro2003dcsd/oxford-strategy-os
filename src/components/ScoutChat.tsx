@@ -78,8 +78,11 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
       // mostramos el código en vez de un "no se pudo contactar" genérico.
       const tipo = res.headers.get("content-type") ?? "";
       if (!tipo.includes("application/json")) {
+        // Con la sesión vencida el proxy redirige el POST al login y la
+        // respuesta llega como HTML, no como error.
+        const alLogin = res.redirected || res.url.includes("/login");
         setError(
-          res.status === 401 || res.status === 307
+          alLogin || res.status === 401
             ? "Se cerró la sesión. Volvé a entrar y probá de nuevo."
             : `El servidor respondió ${res.status} sin datos. Si estás en local, revisá que el servidor de desarrollo esté corriendo.`
         );
