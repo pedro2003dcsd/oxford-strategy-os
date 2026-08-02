@@ -74,9 +74,21 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
           })),
         }),
       });
+      // Si la respuesta no es JSON (404, 500 o una página de error del host),
+      // mostramos el código en vez de un "no se pudo contactar" genérico.
+      const tipo = res.headers.get("content-type") ?? "";
+      if (!tipo.includes("application/json")) {
+        setError(
+          res.status === 401 || res.status === 307
+            ? "Se cerró la sesión. Volvé a entrar y probá de nuevo."
+            : `El servidor respondió ${res.status} sin datos. Si estás en local, revisá que el servidor de desarrollo esté corriendo.`
+        );
+        return;
+      }
+
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Scout no pudo responder.");
+        setError(data.error ?? `Scout no pudo responder (${res.status}).`);
         return;
       }
       setMensajes((prev) => [
@@ -91,7 +103,9 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
         },
       ]);
     } catch {
-      setError("No se pudo contactar al servidor.");
+      setError(
+        "No se pudo contactar al servidor. Si estás en local, arrancá el servidor de desarrollo (npm run dev); si estás en la app publicada, recargá la página."
+      );
     } finally {
       setCargando(false);
       inputRef.current?.focus();
