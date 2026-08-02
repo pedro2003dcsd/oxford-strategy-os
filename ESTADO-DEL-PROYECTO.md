@@ -1,6 +1,6 @@
 # Estado del proyecto — Oxford Strategy OS
 
-_Última actualización: 1 de agosto de 2026_
+_Última actualización: 2 de agosto de 2026_
 
 Documento de traspaso: si empezás una conversación nueva con Claude sobre este
 proyecto, pedile que lea este archivo primero.
@@ -56,6 +56,14 @@ herramienta interna).
    trimestral y reporte de área. Usa la API de Claude si hay
    `ANTHROPIC_API_KEY`; si no, genera el informe por reglas sobre los mismos
    datos y lo avisa en pantalla.
+6. **Scout AI** (`/scout`) — chat en lenguaje natural sobre el estado real del
+   trimestre. En cada consulta la API Route `/api/ai/scout-chat` lee KRs,
+   check-ins, compromisos LOM y proyectos SOLOP, y arma con eso el contexto que
+   recibe Claude. Tiene prompts rápidos (rojos, check-ins pendientes,
+   rentabilidad <65%, resumen LOM) y enlaza los KRs que menciona la respuesta
+   con el color del semáforo. Se entra por la pestaña "Scout AI" o por el botón
+   flotante que está en todas las pantallas. Sin `ANTHROPIC_API_KEY` responde
+   por reglas, igual que Informes.
 
 ## Base de datos
 
@@ -79,10 +87,11 @@ de correrla en local. Las tres ya están aplicadas en producción.
 - **Margen SOLOP: carga manual.** Se decidió cargar el margen a mano desde la
   Torre de Control. El campo queda listo para integrar una API o export de
   SOLOP más adelante.
-- **IA en informes: opcional.** Falta configurar `ANTHROPIC_API_KEY` en Vercel
-  (crear cuenta en console.anthropic.com, cargar crédito, generar key,
-  agregarla en Settings → Environment Variables). Sin eso el módulo funciona
-  igual con informes por reglas.
+- **IA: opcional pero recomendada.** Falta configurar `ANTHROPIC_API_KEY` en
+  Vercel (crear cuenta en console.anthropic.com, cargar crédito, generar key,
+  agregarla en Settings → Environment Variables). Sin eso, Informes y Scout AI
+  funcionan igual pero responden por reglas: Scout resuelve bien los cuatro
+  prompts rápidos, y las preguntas abiertas caen en un resumen general.
 - `npm audit` reporta vulnerabilidades en `postcss`/`sharp` que vienen dentro
   de `node_modules/next`. Arreglarlas con `--force` bajaría Next.js a la v9 y
   rompería el proyecto; se dejaron como están a la espera de una actualización
