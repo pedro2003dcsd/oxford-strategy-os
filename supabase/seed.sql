@@ -1,47 +1,237 @@
--- Datos base reales (los 3 pilares 2026 de Grupo Oxford)
-insert into pilares (nombre, descripcion, anio) values
-  ('Rentabilidad Interna', 'Costeo eficiente, control de horas y costos fijos.', 2026),
-  ('Experiencia del Cliente', 'NPS, estandarización de servicios y retención.', 2026),
-  ('Rediseñar la Organización', 'Adopción de IA, agilidad por PODs/Células y mindset data-driven.', 2026);
+-- ============================================================
+-- Oxford Strategy OS — datos de demo Q3 2026 (Grupo Oxford)
+--
+-- Este archivo es idempotente: borra el set anterior y lo vuelve a
+-- cargar completo. Se usa para dos cosas:
+--   1. En local, `npx supabase db reset` lo corre solo.
+--   2. En la nube, pegar este contenido en el SQL editor de Supabase.
+--
+-- ⚠ BORRA todo el árbol estratégico existente (pilares, OKRs, KRs,
+--   check-ins, compromisos LOM y proyectos SOLOP). No toca usuarios.
+-- ============================================================
 
--- ============================================================
--- Datos de ejemplo (DEMO) para probar la app en local.
--- Reemplazar/borrar cuando se carguen los OKRs reales del equipo.
--- ============================================================
+begin;
+
+delete from proyectos_solop;
+delete from compromisos_lom;
+delete from check_ins;
+delete from hitos_kr;
+delete from key_results;
+delete from okr_trimestral;
+delete from okr_anual;
+delete from pilares;
+
+-- ------------------------------------------------------------
+-- 1. Pilares estratégicos 2026
+-- ------------------------------------------------------------
+insert into pilares (nombre, descripcion, anio) values
+  ('Rentabilidad Interna y Excelencia Operativa',
+   'Costeo eficiente, control de horas por POD y disciplina de costos fijos.', 2026),
+  ('Experiencia del Cliente y Posicionamiento de Marca',
+   'NPS, estandarización de entregas y retención de Clientes Estrella.', 2026),
+  ('Rediseño Organizacional y Adopción de IA',
+   'Agilidad por PODs/Células, mindset data-driven y adopción de IA generativa.', 2026);
+
 do $$
 declare
   pilar_rentabilidad uuid;
-  okr_anual_id uuid;
-  okr_trim_id uuid;
-  kr_id uuid;
+  pilar_cliente uuid;
+  okr_facturacion uuid;
+  okr_nps uuid;
+  ot uuid;
+  kr uuid;
+  kr_batistella uuid;
 begin
-  select id into pilar_rentabilidad from pilares where nombre = 'Rentabilidad Interna';
+  select id into pilar_rentabilidad from pilares
+    where nombre = 'Rentabilidad Interna y Excelencia Operativa';
+  select id into pilar_cliente from pilares
+    where nombre = 'Experiencia del Cliente y Posicionamiento de Marca';
+
+  -- ----------------------------------------------------------
+  -- 2. OKRs anuales
+  -- ----------------------------------------------------------
+  insert into okr_anual (pilar_id, titulo, objetivo, responsable)
+  values (
+    pilar_rentabilidad,
+    'Alcanzar $800M en facturación ejecutada manteniendo un margen de utilidad bruta promedio del 68%',
+    'Facturación ejecutada (no vendida) de $800M en 2026, con margen de utilidad bruta promedio del 68% sobre el total de la cartera.',
+    'Mateo'
+  ) returning id into okr_facturacion;
 
   insert into okr_anual (pilar_id, titulo, objetivo, responsable)
-  values (pilar_rentabilidad, '[DEMO] Alcanzar la Estrella Polar', '20 clientes activos con UB/Venta > 65%.', 'Mateo')
-  returning id into okr_anual_id;
+  values (
+    pilar_cliente,
+    'Lograr un NPS promedio > 70 en los Clientes Estrella de la agencia',
+    'Medición trimestral de NPS sobre la cartera de Clientes Estrella (integrales de fee mensual).',
+    'Mateo'
+  ) returning id into okr_nps;
 
+  -- ----------------------------------------------------------
+  -- 3. Comercial / Clientes — Cristóbal Dávalos
+  -- ----------------------------------------------------------
   insert into okr_trimestral (okr_anual_id, area, titulo, trimestre, anio, responsable)
-  values (okr_anual_id, 'Comercial / Clientes', '[DEMO] Subir UB/Venta de cuentas top', 'Q3', 2026, 'Cristóbal')
-  returning id into okr_trim_id;
+  values (okr_facturacion, 'Comercial / Clientes',
+          'Acelerar la captación de Clientes Estrella de Fee Mensual',
+          'Q3', 2026, 'Cristóbal Dávalos')
+  returning id into ot;
 
-  insert into key_results (okr_trimestral_id, titulo, tipo_medicion, valor_inicial, valor_meta, valor_actual, estado_semaforo, cliente_asociado, margen_utilidad_esperado, margen_actual_pct)
-  values (okr_trim_id, '[DEMO] UB/Venta cliente Acme sobre 65%', 'porcentaje', 58, 65, 66, 'verde', 'Acme', 65.0, 61.5)
-  returning id into kr_id;
+  insert into key_results (okr_trimestral_id, titulo, tipo_medicion,
+    valor_inicial, valor_meta, valor_actual, estado_semaforo)
+  values (ot, 'Cerrar 3 nuevos contratos integrales de Fee mensual',
+          'numerico', 0, 3, 0, 'rojo')
+  returning id into kr;
 
-  insert into check_ins (kr_id, usuario, valor_registrado, estado_semaforo, comentario_bloqueos, creado_at)
-  values
-    (kr_id, 'Cristóbal', 58, 'rojo', 'Arranque de trimestre, sin ajustes aún.', now() - interval '21 days'),
-    (kr_id, 'Cristóbal', 61, 'amarillo', 'Renegociando scope con el cliente.', now() - interval '14 days'),
-    (kr_id, 'Cristóbal', 64, 'amarillo', 'Casi en meta, cerrando alcance.', now() - interval '7 days'),
-    (kr_id, 'Cristóbal', 66, 'verde', 'Meta alcanzada, ajustar margen real en SOLOP.', now());
+  insert into check_ins (kr_id, usuario, valor_registrado, estado_semaforo, comentario_bloqueos, creado_at) values
+    (kr, 'Cristóbal Dávalos', 0, 'rojo', 'Arranque de trimestre, pipeline en armado.', now() - interval '28 days'),
+    (kr, 'Cristóbal Dávalos', 1, 'amarillo', 'Primer contrato firmado: Ueno 2026.', now() - interval '21 days'),
+    (kr, 'Cristóbal Dávalos', 1, 'amarillo', null, now() - interval '14 days'),
+    (kr, 'Cristóbal Dávalos', 2, 'verde', null, now() - interval '7 days'),
+    (kr, 'Cristóbal Dávalos', 2, 'verde', 'Tercer contrato en revisión legal, cierre previsto para agosto.', now() - interval '2 days');
 
-  insert into key_results (okr_trimestral_id, titulo, tipo_medicion, valor_inicial, valor_meta, valor_actual, estado_semaforo, margen_utilidad_esperado)
-  values (okr_trim_id, '[DEMO] Implementar dashboard de horas por proyecto', 'hitos', 0, 1, 0, 'amarillo', 65.0)
-  returning id into kr_id;
+  insert into key_results (okr_trimestral_id, titulo, tipo_medicion,
+    valor_inicial, valor_meta, valor_actual, estado_semaforo)
+  values (ot, 'Incrementar la facturación de servicios Ad-Hoc en $150M',
+          'moneda', 0, 150000000, 0, 'rojo')
+  returning id into kr;
+
+  insert into check_ins (kr_id, usuario, valor_registrado, estado_semaforo, comentario_bloqueos, creado_at) values
+    (kr, 'Cristóbal Dávalos', 20000000, 'rojo', 'Ad-Hoc arranca lento, foco puesto en fee mensual.', now() - interval '28 days'),
+    (kr, 'Cristóbal Dávalos', 45000000, 'amarillo', null, now() - interval '21 days'),
+    (kr, 'Cristóbal Dávalos', 62000000, 'amarillo', null, now() - interval '14 days'),
+    (kr, 'Cristóbal Dávalos', 80000000, 'verde', null, now() - interval '7 days'),
+    (kr, 'Cristóbal Dávalos', 95000000, 'verde', 'Buen ritmo, traccionado por Batistella y Ueno.', now() - interval '2 days');
+
+  -- ----------------------------------------------------------
+  -- 4. Digital — Ayelén Bruno
+  -- ----------------------------------------------------------
+  insert into okr_trimestral (okr_anual_id, area, titulo, trimestre, anio, responsable)
+  values (okr_facturacion, 'Digital',
+          'Optimizar la conversión y rendimiento de campañas digitales clave',
+          'Q3', 2026, 'Ayelén Bruno')
+  returning id into ot;
+
+  insert into key_results (okr_trimestral_id, titulo, tipo_medicion,
+    valor_inicial, valor_meta, valor_actual, estado_semaforo,
+    cliente_asociado, margen_utilidad_esperado, margen_actual_pct, margen_actualizado_at)
+  values (ot, 'Alcanzar $12M de retorno en ventas para el cliente Batistella (Bati Off)',
+          'moneda', 0, 12000000, 0, 'rojo',
+          'Batistella', 65.0, 54.0, now() - interval '2 days')
+  returning id into kr_batistella;
+
+  insert into check_ins (kr_id, usuario, valor_registrado, estado_semaforo, comentario_bloqueos, creado_at) values
+    (kr_batistella, 'Ayelén Bruno', 1500000, 'rojo', 'Campaña recién lanzada, learning phase.', now() - interval '28 days'),
+    (kr_batistella, 'Ayelén Bruno', 3200000, 'amarillo', null, now() - interval '21 days'),
+    (kr_batistella, 'Ayelén Bruno', 5000000, 'amarillo', 'Rendimiento por debajo de lo proyectado en formatos verticales.', now() - interval '14 days'),
+    (kr_batistella, 'Ayelén Bruno', 6400000, 'amarillo', null, now() - interval '7 days'),
+    (kr_batistella, 'Ayelén Bruno', 7500000, 'amarillo',
+     'El equipo de Arte viene demorado con los adaptados de video en formato vertical para Meta Ads. Si no se entregan esta semana, la pauta pierde rendimiento.',
+     now() - interval '2 days');
+
+  -- ----------------------------------------------------------
+  -- 5. Arte / Diseño — Matías Merlo
+  -- ----------------------------------------------------------
+  insert into okr_trimestral (okr_anual_id, area, titulo, trimestre, anio, responsable)
+  values (okr_nps, 'Arte / Diseño',
+          'Estandarizar entregas creativas para cuentas principales',
+          'Q3', 2026, 'Matías Merlo')
+  returning id into ot;
+
+  insert into key_results (okr_trimestral_id, titulo, tipo_medicion,
+    valor_inicial, valor_meta, valor_actual, estado_semaforo)
+  values (ot, 'Entregar el 100% de los kits audiovisuales y creativos de campaña a tiempo',
+          'porcentaje', 0, 100, 0, 'rojo')
+  returning id into kr;
+
+  insert into check_ins (kr_id, usuario, valor_registrado, estado_semaforo, comentario_bloqueos, creado_at) values
+    (kr, 'Matías Merlo', 20, 'rojo', 'Sin proceso estandarizado todavía.', now() - interval '28 days'),
+    (kr, 'Matías Merlo', 35, 'rojo', 'Se definió el checklist de entrega por campaña.', now() - interval '21 days'),
+    (kr, 'Matías Merlo', 45, 'amarillo', null, now() - interval '14 days'),
+    (kr, 'Matías Merlo', 55, 'amarillo', null, now() - interval '7 days'),
+    (kr, 'Matías Merlo', 60, 'rojo',
+     'Sobrecarga de pedidos Ad-Hoc. Necesitamos reasignar prioridad para Batistella y Ueno antes del martes.',
+     now() - interval '2 days');
+
+  -- ----------------------------------------------------------
+  -- 6. Planificación y Operaciones — Laura Bonetto
+  -- ----------------------------------------------------------
+  insert into okr_trimestral (okr_anual_id, area, titulo, trimestre, anio, responsable)
+  values (okr_facturacion, 'Planificación y Operaciones',
+          'Garantizar la eficiencia de horas y rentabilidad por proyecto',
+          'Q3', 2026, 'Laura Bonetto')
+  returning id into ot;
+
+  insert into key_results (okr_trimestral_id, titulo, tipo_medicion,
+    valor_inicial, valor_meta, valor_actual, estado_semaforo)
+  values (ot, 'Implementar el módulo de control de horas en SOLOP en el 100% de los PODs',
+          'hitos', 0, 3, 0, 'amarillo')
+  returning id into kr;
 
   insert into hitos_kr (kr_id, titulo, cumplido, orden) values
-    (kr_id, 'Definir estructura de datos en SOLOP', true, 1),
-    (kr_id, 'Armar dashboard en herramienta de BI', false, 2),
-    (kr_id, 'Capacitar a líderes de área', false, 3);
+    (kr, 'Carga de plantilla de tarifas', true, 1),
+    (kr, 'Capacidad de horas por POD asignada', true, 2),
+    (kr, 'Auditoría quincenal de desvíos', false, 3);
+
+  insert into check_ins (kr_id, usuario, valor_registrado, estado_semaforo, comentario_bloqueos, creado_at) values
+    (kr, 'Laura Bonetto', 0, 'amarillo', 'Relevamiento de tarifas por POD en curso.', now() - interval '21 days'),
+    (kr, 'Laura Bonetto', 1, 'amarillo', null, now() - interval '14 days'),
+    (kr, 'Laura Bonetto', 2, 'verde', null, now() - interval '7 days'),
+    (kr, 'Laura Bonetto', 2, 'verde', 'Falta la auditoría quincenal de desvíos, prevista para la semana próxima.', now() - interval '2 days');
+
+  -- ----------------------------------------------------------
+  -- 7. Administración y Finanzas — Dolores García Díaz
+  -- ----------------------------------------------------------
+  insert into okr_trimestral (okr_anual_id, area, titulo, trimestre, anio, responsable)
+  values (okr_facturacion, 'Administración y Finanzas',
+          'Control de costos fijos y cobranzas quincenales',
+          'Q3', 2026, 'Dolores García Díaz')
+  returning id into ot;
+
+  insert into key_results (okr_trimestral_id, titulo, tipo_medicion,
+    valor_inicial, valor_meta, valor_actual, estado_semaforo)
+  values (ot, 'Reducir el plazo medio de cobro a clientes de 45 a 25 días',
+          'numerico', 45, 25, 45, 'rojo')
+  returning id into kr;
+
+  -- Sin check-in de los últimos 7 días: aparece como pendiente en el inbox
+  -- de Check-in Express y en la agenda de la LOM.
+  insert into check_ins (kr_id, usuario, valor_registrado, estado_semaforo, comentario_bloqueos, creado_at) values
+    (kr, 'Dolores García Díaz', 45, 'rojo', 'Sin cambios respecto del cierre de Q2.', now() - interval '24 days'),
+    (kr, 'Dolores García Díaz', 40, 'amarillo', 'Se depuró la cartera de deudores viejos.', now() - interval '17 days'),
+    (kr, 'Dolores García Díaz', 30, 'verde', 'Se implementó el recordatorio automático de vencimientos.', now() - interval '10 days');
+
+  -- ----------------------------------------------------------
+  -- 8. Equipo Consciente / Cultura — Mariana García Díaz
+  -- ----------------------------------------------------------
+  insert into okr_trimestral (area, titulo, trimestre, anio, responsable)
+  values ('Equipo Consciente / Cultura',
+          'Fomentar el bienestar y la adopción de IA en los PODs',
+          'Q3', 2026, 'Mariana García Díaz')
+  returning id into ot;
+
+  insert into key_results (okr_trimestral_id, titulo, tipo_medicion,
+    valor_inicial, valor_meta, valor_actual, estado_semaforo)
+  values (ot, '100% del equipo capacitado en herramientas de IA generativa',
+          'porcentaje', 0, 100, 0, 'rojo')
+  returning id into kr;
+
+  insert into check_ins (kr_id, usuario, valor_registrado, estado_semaforo, comentario_bloqueos, creado_at) values
+    (kr, 'Mariana García Díaz', 25, 'amarillo', 'Primer taller dictado para Comercial y Digital.', now() - interval '24 days'),
+    (kr, 'Mariana García Díaz', 50, 'verde', null, now() - interval '17 days'),
+    (kr, 'Mariana García Díaz', 80, 'verde', 'Falta el módulo de práctica con casos reales para el POD de Arte.', now() - interval '10 days');
+
+  -- ----------------------------------------------------------
+  -- 9. Torre de Control SOLOP
+  -- ----------------------------------------------------------
+  -- Batistella: margen real 54% sobre facturación de $12M (costo $5.52M).
+  -- 88 de 100 horas consumidas -> dispara la advertencia de consumo de horas.
+  insert into proyectos_solop (cliente, tipo_contrato, kr_id,
+    horas_presupuestadas, horas_consumidas, facturacion_total, costo_operativo)
+  values ('Batistella (Bati Off)', 'Fee', kr_batistella, 100, 88, 12000000, 5520000);
+
+  -- Ueno 2026: margen real 72% sobre facturación de $18M (costo $5.04M).
+  insert into proyectos_solop (cliente, tipo_contrato,
+    horas_presupuestadas, horas_consumidas, facturacion_total, costo_operativo)
+  values ('Ueno 2026', 'Fee', 150, 60, 18000000, 5040000);
 end $$;
+
+commit;
