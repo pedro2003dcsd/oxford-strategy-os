@@ -79,7 +79,7 @@ export default async function OkrsPage() {
           kr={kr}
           hitos={kr.hitos_kr}
           triggerLabel="Editar"
-          triggerClassName="ml-auto shrink-0 rounded-md px-2 py-0.5 text-xs text-neutral-400 transition hover:bg-black/5 hover:text-neutral-900 dark:hover:bg-white/10 dark:hover:text-white"
+          triggerClassName="ml-auto shrink-0 rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
         />
       </div>
     );
@@ -94,18 +94,18 @@ export default async function OkrsPage() {
         defaultOpen
         summary={
           <p className="text-sm font-medium">
-            <span className="mr-1.5 rounded bg-black/5 px-1.5 py-0.5 text-xs font-semibold dark:bg-white/10">
+            <span className="mr-1.5 rounded bg-linea/60 px-1.5 py-0.5 text-xs font-semibold">
               {ot.area}
             </span>
             {ot.titulo}{" "}
-            <span className="font-normal text-neutral-500">
+            <span className="font-normal text-tenue">
               · {ot.trimestre} {ot.anio} · {ot.responsable}
             </span>
           </p>
         }
       >
         {krs.length === 0 ? (
-          <p className="py-1 text-xs text-neutral-400">Sin Key Results todavía.</p>
+          <p className="py-1 text-xs text-tenue">Sin Key Results todavía.</p>
         ) : (
           krs.map(renderKr)
         )}
@@ -124,13 +124,13 @@ export default async function OkrsPage() {
           <p className="text-sm font-semibold">
             {oa.titulo}{" "}
             {oa.responsable && (
-              <span className="font-normal text-neutral-500">· {oa.responsable}</span>
+              <span className="font-normal text-tenue">· {oa.responsable}</span>
             )}
           </p>
         }
       >
         {trims.length === 0 ? (
-          <p className="py-1 text-xs text-neutral-400">
+          <p className="py-1 text-xs text-tenue">
             Sin OKRs trimestrales alineados.
           </p>
         ) : (
@@ -145,31 +145,31 @@ export default async function OkrsPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold">Alineación estratégica</h1>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-tenue">
             Pilares → OKRs anuales → OKRs trimestrales por área → Key Results.
           </p>
         </div>
         <KrModal
           okrsTrimestrales={okrsTrimestralesList}
           triggerLabel="+ Nuevo Key Result"
-          triggerClassName="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+          triggerClassName="rounded-md bg-oxford px-3 py-1.5 text-sm font-medium text-white"
         />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <details className="rounded-lg border border-black/10 p-4 dark:border-white/10">
+        <details className="rounded-lg border border-linea p-4">
           <summary className="cursor-pointer text-sm font-semibold">Nuevo pilar</summary>
           <div className="mt-3">
             <NewPilarForm />
           </div>
         </details>
-        <details className="rounded-lg border border-black/10 p-4 dark:border-white/10">
+        <details className="rounded-lg border border-linea p-4">
           <summary className="cursor-pointer text-sm font-semibold">Nuevo OKR anual</summary>
           <div className="mt-3">
             <NewOkrAnualForm pilares={pilaresList} />
           </div>
         </details>
-        <details className="rounded-lg border border-black/10 p-4 dark:border-white/10">
+        <details className="rounded-lg border border-linea p-4">
           <summary className="cursor-pointer text-sm font-semibold">
             Nuevo OKR trimestral
           </summary>
@@ -181,14 +181,14 @@ export default async function OkrsPage() {
 
       <div className="space-y-4">
         {pilaresList.length === 0 && (
-          <p className="text-sm text-neutral-500">Todavía no hay pilares cargados.</p>
+          <p className="text-sm text-tenue">Todavía no hay pilares cargados.</p>
         )}
         {pilaresList.map((pilar) => {
           const oas = okrsAnualesPorPilar.get(pilar.id) ?? [];
           return (
             <section
               key={pilar.id}
-              className="rounded-lg border border-black/10 p-4 dark:border-white/10"
+              className="rounded-lg border border-linea p-4"
             >
               <Collapsible
                 defaultOpen
@@ -196,13 +196,13 @@ export default async function OkrsPage() {
                   <div>
                     <h2 className="text-base font-semibold">{pilar.nombre}</h2>
                     {pilar.descripcion && (
-                      <p className="text-sm text-neutral-500">{pilar.descripcion}</p>
+                      <p className="text-sm text-tenue">{pilar.descripcion}</p>
                     )}
                   </div>
                 }
               >
                 {oas.length === 0 ? (
-                  <p className="py-1 text-xs text-neutral-400">
+                  <p className="py-1 text-xs text-tenue">
                     Sin OKRs anuales todavía.
                   </p>
                 ) : (
@@ -214,8 +214,8 @@ export default async function OkrsPage() {
         })}
 
         {okrsAnualesSinPilar.length > 0 && (
-          <section className="rounded-lg border border-dashed border-black/20 p-4 dark:border-white/20">
-            <h2 className="mb-2 text-base font-semibold text-neutral-500">
+          <section className="rounded-lg border border-dashed border-linea-fuerte p-4 border-linea">
+            <h2 className="mb-2 text-base font-semibold text-tenue">
               OKRs anuales sin pilar asignado
             </h2>
             <div className="space-y-2">{okrsAnualesSinPilar.map(renderOkrAnual)}</div>
@@ -223,8 +223,8 @@ export default async function OkrsPage() {
         )}
 
         {okrsTrimSinAlinear.length > 0 && (
-          <section className="rounded-lg border border-dashed border-black/20 p-4 dark:border-white/20">
-            <h2 className="mb-2 text-base font-semibold text-neutral-500">
+          <section className="rounded-lg border border-dashed border-linea-fuerte p-4 border-linea">
+            <h2 className="mb-2 text-base font-semibold text-tenue">
               OKRs trimestrales sin alinear a un OKR anual
             </h2>
             <div className="space-y-2">{okrsTrimSinAlinear.map(renderOkrTrimestral)}</div>

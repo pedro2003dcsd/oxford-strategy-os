@@ -11,10 +11,10 @@ import { AREAS, TRIMESTRES } from "@/lib/types";
 import type { OkrAnual, Pilar } from "@/lib/types";
 
 const inputClass =
-  "w-full rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20";
-const labelClass = "text-xs font-medium text-neutral-500";
+  "w-full rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm";
+const labelClass = "text-xs font-medium text-tenue";
 const submitClass =
-  "rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900";
+  "rounded-md bg-oxford px-3 py-1.5 text-sm font-medium text-white transition hover:bg-oxford-fuerte disabled:opacity-50";
 
 function ErrorText({ state }: { state: FormActionState }) {
   if (!state?.error) return null;

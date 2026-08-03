@@ -1,28 +1,65 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ============================================================
+   Identidad Grupo Oxford
+   Un solo juego de tokens para claro y oscuro. Los componentes
+   usan siempre los nombres semánticos (bg-panel, text-tenue,
+   border-linea, bg-oxford), nunca colores crudos: así el tema
+   se cambia desde acá y no archivo por archivo.
+   ============================================================ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  /* Magenta Oxford — acento de marca, igual en ambos temas */
+  --oxford: #e0115f;
+  --oxford-fuerte: #d81b60;
+  --oxford-suave: #fce7f0;
+
+  /* Tema claro: limpio y de alto contraste (Notion / Linear) */
+  --lienzo: #fafafa;
+  --panel: #ffffff;
+  --linea: #e2e8f0; /* slate-200 */
+  --linea-fuerte: #cbd5e1; /* slate-300 */
+  --tinta: #0f172a; /* slate-900 */
+  --tenue: #475569; /* slate-600 — legible, no gris fantasma */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* Tema oscuro: borravino ejecutivo */
+    --lienzo: #0f070e;
+    --panel: #1c0b18;
+    --linea: rgb(131 24 67 / 0.4); /* pink-900/40 */
+    --linea-fuerte: rgb(190 24 93 / 0.55); /* pink-700/55 */
+    --tinta: #ffffff;
+    --tenue: #cbd5e1; /* slate-300 — brillante sobre borravino */
+    --oxford-suave: rgb(224 17 95 / 0.14);
   }
 }
 
+@theme inline {
+  --color-background: var(--lienzo);
+  --color-foreground: var(--tinta);
+  --color-panel: var(--panel);
+  --color-linea: var(--linea);
+  --color-linea-fuerte: var(--linea-fuerte);
+  --color-tenue: var(--tenue);
+  --color-oxford: var(--oxford);
+  --color-oxford-fuerte: var(--oxford-fuerte);
+  --color-oxford-suave: var(--oxford-suave);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--lienzo);
+  color: var(--tinta);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* El foco tiene que verse: se usa con teclado en las reuniones. */
+:focus-visible {
+  outline: 2px solid var(--oxford);
+  outline-offset: 2px;
 }
 
 /* "Descargar PDF" usa el diálogo de impresión del navegador: sacamos la

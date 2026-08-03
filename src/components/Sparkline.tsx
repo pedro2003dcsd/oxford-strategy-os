@@ -12,7 +12,7 @@ export function Sparkline({
 }) {
   if (checkIns.length < 2) {
     return (
-      <p className="text-xs text-neutral-400">
+      <p className="text-xs text-tenue">
         Hacen falta al menos 2 check-ins para ver la tendencia.
       </p>
     );

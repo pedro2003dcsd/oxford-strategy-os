@@ -2,13 +2,23 @@ import type { HitoKr, KeyResult } from "@/lib/types";
 
 type KrConHitos = KeyResult & { hitos_kr: HitoKr[] };
 
-/** Un KR se considera cumplido si llegó a la meta numérica, o si (siendo
- * cualitativo) tiene al menos un hito y todos están marcados como cumplidos. */
+/** Un KR es descendente cuando la meta está por debajo del punto de partida:
+ * bajar el plazo de cobro de 45 a 25 días, reducir costos, achicar rotación.
+ * Ahí "avanzar" es que el número baje, no que suba. */
+export function esDescendente(kr: KeyResult): boolean {
+  return kr.valor_meta < kr.valor_inicial;
+}
+
+/** Un KR se considera cumplido si llegó a la meta numérica (en el sentido que
+ * corresponda), o si (siendo cualitativo) tiene al menos un hito y todos están
+ * marcados como cumplidos. */
 export function isKrCumplido(kr: KrConHitos): boolean {
   if (kr.tipo_medicion === "hitos") {
     return kr.hitos_kr.length > 0 && kr.hitos_kr.every((h) => h.cumplido);
   }
-  return kr.valor_actual >= kr.valor_meta;
+  return esDescendente(kr)
+    ? kr.valor_actual <= kr.valor_meta
+    : kr.valor_actual >= kr.valor_meta;
 }
 
 /** Alerta de rentabilidad (scope creep): el KR se dio por cumplido pero el

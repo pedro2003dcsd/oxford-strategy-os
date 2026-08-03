@@ -51,7 +51,7 @@ export function ScoutFloatingButton() {
         aria-label={abierto ? "Cerrar Scout AI" : "Abrir Scout AI"}
         className={clsx(
           "fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-white shadow-lg transition print:hidden",
-          abierto ? "bg-neutral-800 hover:bg-neutral-700" : "bg-indigo-600 hover:bg-indigo-500"
+          abierto ? "bg-tenue hover:bg-tinta" : "bg-oxford hover:bg-oxford-fuerte"
         )}
       >
         <span aria-hidden>{abierto ? "✕" : "✦"}</span>

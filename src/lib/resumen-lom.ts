@@ -3,6 +3,98 @@ import { formatValor, hasAlertaRentabilidad } from "@/lib/kr-logic";
 
 const DIAS_SEMANA = 7;
 
+/** Resumen para pegar en el grupo interno. Slack y WhatsApp comparten la
+ * misma sintaxis de negrita (*texto*), así que un solo formato sirve para
+ * los dos. Sin tablas ni títulos Markdown: en el chat se ven como basura. */
+export function generarResumenChat(
+  krs: KeyResultCompleto[],
+  checkIns: CheckIn[],
+  compromisos: CompromisoLom[]
+): string {
+  const hoy = new Date();
+  const haceUnaSemana = new Date(hoy.getTime() - DIAS_SEMANA * 86400000);
+
+  const porKr = new Map<string, CheckIn[]>();
+  for (const c of checkIns) {
+    if (!porKr.has(c.kr_id)) porKr.set(c.kr_id, []);
+    porKr.get(c.kr_id)!.push(c);
+  }
+
+  const rojos = krs.filter((k) => k.estado_semaforo === "rojo");
+  const amarillos = krs.filter((k) => k.estado_semaforo === "amarillo");
+  const verdes = krs.filter((k) => k.estado_semaforo === "verde");
+  const alertas = krs.filter(hasAlertaRentabilidad);
+  const sinCheckIn = krs.filter((k) => {
+    const h = porKr.get(k.id) ?? [];
+    const ultimo = h[h.length - 1];
+    return !ultimo || new Date(ultimo.creado_at) < haceUnaSemana;
+  });
+
+  const progreso = (kr: KeyResultCompleto) =>
+    kr.tipo_medicion === "hitos"
+      ? `${kr.hitos_kr.filter((h) => h.cumplido).length}/${kr.hitos_kr.length} hitos`
+      : `${formatValor(kr.valor_actual, kr.tipo_medicion)} de ${formatValor(kr.valor_meta, kr.tipo_medicion)}`;
+
+  const l: string[] = [];
+  l.push(`*LOM — ${hoy.toLocaleDateString("es-AR")}*`);
+  l.push(
+    `${krs.length} KRs · 🟢 ${verdes.length} · 🟡 ${amarillos.length} · 🔴 ${rojos.length}`
+  );
+
+  const desvios = [...rojos, ...amarillos];
+  if (desvios.length > 0) {
+    l.push("");
+    l.push("*Desvíos*");
+    for (const kr of desvios) {
+      const emoji = kr.estado_semaforo === "rojo" ? "🔴" : "🟡";
+      l.push(
+        `${emoji} ${kr.titulo} — ${progreso(kr)} (${kr.okr_trimestral?.area ?? "sin área"}, ${kr.okr_trimestral?.responsable ?? "sin responsable"})`
+      );
+      const bloqueo = [...(porKr.get(kr.id) ?? [])]
+        .reverse()
+        .find((c) => c.comentario_bloqueos);
+      if (bloqueo) l.push(`   ↳ ${bloqueo.comentario_bloqueos}`);
+    }
+  }
+
+  if (alertas.length > 0) {
+    l.push("");
+    l.push("*Alertas de rentabilidad*");
+    for (const kr of alertas) {
+      l.push(
+        `⚠️ ${kr.titulo} — margen ${kr.margen_actual_pct}% (esperado ${kr.margen_utilidad_esperado}%)`
+      );
+    }
+  }
+
+  const abiertos = compromisos.filter((c) => !c.cumplido);
+  if (abiertos.length > 0) {
+    l.push("");
+    l.push("*Compromisos abiertos*");
+    for (const c of abiertos) {
+      const kr = krs.find((k) => k.id === c.kr_id);
+      l.push(`• ${c.descripcion}${kr ? ` (${kr.titulo})` : ""}`);
+    }
+  }
+
+  if (sinCheckIn.length > 0) {
+    l.push("");
+    l.push("*Check-ins pendientes*");
+    for (const kr of sinCheckIn) {
+      l.push(
+        `• ${kr.okr_trimestral?.responsable ?? "sin responsable"} — ${kr.titulo}`
+      );
+    }
+  }
+
+  if (desvios.length === 0 && alertas.length === 0) {
+    l.push("");
+    l.push("✅ Sin desvíos ni alertas de rentabilidad esta semana.");
+  }
+
+  return l.join("\n");
+}
+
 /** Arma el resumen ejecutivo LOM en Markdown a partir de los datos reales.
  * Regla, no IA: con este volumen de KRs el diagnóstico es determinístico. */
 export function generarResumenLom(

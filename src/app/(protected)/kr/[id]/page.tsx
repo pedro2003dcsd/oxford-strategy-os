@@ -7,6 +7,7 @@ import { TrendChart } from "@/components/TrendChart";
 import { CheckInForm } from "@/components/CheckInForm";
 import { HitosList } from "@/components/HitosList";
 import { MargenForm } from "@/components/MargenForm";
+import { IniciativasPanel } from "@/components/IniciativasPanel";
 import { formatValor, hasAlertaRentabilidad, isKrCumplido } from "@/lib/kr-logic";
 
 export default async function KrDetailPage({
@@ -22,6 +23,7 @@ export default async function KrDetailPage({
     .select(
       `*,
       hitos_kr ( * ),
+      iniciativas ( * ),
       okr_trimestral (
         *,
         okr_anual (
@@ -52,7 +54,7 @@ export default async function KrDetailPage({
     <div className="space-y-6">
       <div className="space-y-2">
         {okrTrim && (
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-tenue">
             {okrTrim.okr_anual?.pilares?.nombre ?? "Sin pilar"} ·{" "}
             {okrTrim.okr_anual?.titulo ?? "Sin OKR anual"} ·{" "}
             <Link href="/okrs" className="underline hover:no-underline">
@@ -65,18 +67,18 @@ export default async function KrDetailPage({
           <h1 className="text-xl font-semibold">{krCompleto.titulo}</h1>
           <SemaforoBadge estado={krCompleto.estado_semaforo} />
           {cumplido && (
-            <span className="rounded-full bg-neutral-900/10 px-2.5 py-1 text-xs font-medium dark:bg-white/10">
+            <span className="rounded-full bg-linea px-2.5 py-1 text-xs font-medium">
               Cumplido
             </span>
           )}
         </div>
         {krCompleto.cliente_asociado && (
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-tenue">
             Cliente: {krCompleto.cliente_asociado}
           </p>
         )}
         {okrTrim?.responsable && (
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-tenue">
             Responsable: {okrTrim.responsable}
           </p>
         )}
@@ -96,11 +98,11 @@ export default async function KrDetailPage({
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
-          <div className="space-y-3 rounded-lg border border-black/10 p-4 dark:border-white/10">
+          <div className="space-y-3 rounded-lg border border-linea p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">Tendencia</h3>
               {krCompleto.tipo_medicion !== "hitos" && (
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-tenue">
                   Meta: {formatValor(krCompleto.valor_meta, krCompleto.tipo_medicion)}
                 </p>
               )}
@@ -112,28 +114,36 @@ export default async function KrDetailPage({
             )}
           </div>
 
-          <div className="rounded-lg border border-black/10 p-4 dark:border-white/10">
+          <div className="rounded-lg border border-linea p-4">
+            <IniciativasPanel
+              krId={krCompleto.id}
+              iniciativas={krCompleto.iniciativas ?? []}
+              responsablePorDefecto={okrTrim?.responsable}
+            />
+          </div>
+
+          <div className="rounded-lg border border-linea p-4">
             <h3 className="mb-3 text-sm font-semibold">Historial de check-ins</h3>
             {historial.length === 0 ? (
-              <p className="text-sm text-neutral-500">Sin check-ins todavía.</p>
+              <p className="text-sm text-tenue">Sin check-ins todavía.</p>
             ) : (
-              <ul className="divide-y divide-black/10 dark:divide-white/10">
+              <ul className="divide-y divide-linea">
                 {[...historial].reverse().map((c) => (
                   <li key={c.id} className="flex items-start justify-between gap-3 py-2">
                     <div>
                       <p className="text-sm">
                         <span className="font-medium">{c.usuario}</span>{" "}
-                        <span className="text-neutral-500">
+                        <span className="text-tenue">
                           registró {formatValor(c.valor_registrado, krCompleto.tipo_medicion)}
                         </span>
                       </p>
                       {c.comentario_bloqueos && (
-                        <p className="text-xs text-neutral-500">{c.comentario_bloqueos}</p>
+                        <p className="text-xs text-tenue">{c.comentario_bloqueos}</p>
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-1 whitespace-nowrap">
                       <SemaforoBadge estado={c.estado_semaforo} compact />
-                      <span className="text-xs text-neutral-400">
+                      <span className="text-xs text-tenue">
                         {new Date(c.creado_at).toLocaleDateString("es-AR")}
                       </span>
                     </div>

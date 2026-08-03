@@ -12,8 +12,8 @@ import { TIPOS_MEDICION } from "@/lib/types";
 import type { HitoKr, KeyResult, OkrTrimestral, TipoMedicion } from "@/lib/types";
 
 const inputClass =
-  "w-full rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20";
-const labelClass = "text-xs font-medium text-neutral-500";
+  "w-full rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm";
+const labelClass = "text-xs font-medium text-tenue";
 
 const TIPO_LABELS: Record<TipoMedicion, string> = {
   porcentaje: "% Porcentaje",
@@ -71,12 +71,12 @@ export function KrModal({
       </button>
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-linea/600 p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-black/10 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-neutral-900">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-linea bg-panel p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-base font-semibold">
                 {isEdit ? "Editar Key Result" : "Nuevo Key Result"}
@@ -84,7 +84,7 @@ export function KrModal({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-md p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                className="rounded-md p-1 text-tenue hover:text-foreground"
                 aria-label="Cerrar"
               >
                 ✕
@@ -125,7 +125,7 @@ export function KrModal({
 
               <div className="space-y-1">
                 <label className={labelClass}>Tipo de medición</label>
-                <div className="flex flex-wrap gap-1 rounded-lg bg-black/5 p-1 dark:bg-white/10">
+                <div className="flex flex-wrap gap-1 rounded-lg bg-linea/60 p-1">
                   {TIPOS_MEDICION.map((t) => (
                     <button
                       key={t}
@@ -134,8 +134,8 @@ export function KrModal({
                       className={clsx(
                         "rounded-md px-2.5 py-1 text-xs font-medium transition",
                         tipo === t
-                          ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-800 dark:text-white"
-                          : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                          ? "bg-panel text-foreground shadow-sm  "
+                          : "text-tenue hover:text-foreground"
                       )}
                     >
                       {TIPO_LABELS[t]}
@@ -196,7 +196,7 @@ export function KrModal({
                         onClick={() =>
                           setHitoRows((rows) => rows.filter((r) => r.key !== row.key))
                         }
-                        className="shrink-0 rounded-md px-2 py-1 text-sm text-neutral-400 hover:text-red-600"
+                        className="shrink-0 rounded-md px-2 py-1 text-sm text-tenue hover:text-red-600"
                         aria-label="Eliminar hito"
                       >
                         ✕
@@ -212,7 +212,7 @@ export function KrModal({
                       ]);
                       setNextKey((k) => k + 1);
                     }}
-                    className="rounded-md border border-dashed border-black/20 px-3 py-1.5 text-xs font-medium text-neutral-500 hover:border-black/40 hover:text-neutral-900 dark:border-white/20 dark:hover:text-white"
+                    className="rounded-md border border-dashed border-linea-fuerte px-3 py-1.5 text-xs font-medium text-tenue hover:border-oxford/50 hover:text-foreground border-linea"
                   >
                     + Agregar hito
                   </button>
@@ -246,14 +246,14 @@ export function KrModal({
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-md border border-black/15 px-3 py-1.5 text-sm font-medium dark:border-white/20"
+                  className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={pending}
-                  className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+                  className="rounded-md bg-oxford px-3 py-1.5 text-sm font-medium text-white transition hover:bg-oxford-fuerte disabled:opacity-50"
                 >
                   {pending
                     ? "Guardando…"

@@ -5,7 +5,7 @@ export function SignOutButton() {
     <form action={logout}>
       <button
         type="submit"
-        className="text-sm text-neutral-500 transition hover:text-neutral-900 dark:hover:text-white"
+        className="text-sm text-tenue transition hover:text-foreground"
       >
         Cerrar sesión
       </button>

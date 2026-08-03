@@ -50,7 +50,7 @@ function QuickSteps({
           key={p}
           type="button"
           onClick={() => onStep(p)}
-          className="rounded-md border border-black/15 px-2 py-1 text-xs font-medium text-neutral-500 transition hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/10"
+          className="rounded-md border border-linea px-2 py-1 text-xs font-medium text-tenue transition hover:bg-linea/60"
         >
           {fmt(p)}
         </button>
@@ -101,15 +101,15 @@ function CheckInModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-linea/600 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-black/10 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-neutral-900">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-linea bg-panel p-6 shadow-xl">
         <div className="mb-1 flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-tenue">
               {kr.okr_trimestral?.area} · {kr.okr_trimestral?.titulo}
             </p>
             <h2 className="text-base font-semibold leading-snug">{kr.titulo}</h2>
@@ -117,7 +117,7 @@ function CheckInModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+            className="rounded-md p-1 text-tenue hover:text-foreground"
             aria-label="Cerrar"
           >
             ✕
@@ -132,7 +132,7 @@ function CheckInModal({
         </div>
 
         {tieneImpactoRentabilidad && (
-          <div className="mb-4 rounded-lg border border-indigo-500/30 bg-indigo-500/5 px-3 py-2 text-xs text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+          <div className="mb-4 rounded-lg border border-oxford/30 bg-oxford-suave px-3 py-2 text-xs text-oxford">
             <span className="font-semibold">Recordatorio SOLOP:</span> este
             objetivo impacta en la Estrella Polar. Verificá la rentabilidad en
             SOLOP si hubo cambio de alcance.
@@ -146,14 +146,14 @@ function CheckInModal({
           {esHitos ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-neutral-500">
+                <span className="text-xs font-medium text-tenue">
                   Hitos cumplidos
                 </span>
                 <span className="text-sm font-semibold">{pctHitos}%</span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-linea">
                 <div
-                  className="h-full rounded-full bg-neutral-900 transition-all dark:bg-white"
+                  className="h-full rounded-full bg-oxford transition-all"
                   style={{ width: `${pctHitos}%` }}
                 />
               </div>
@@ -174,11 +174,11 @@ function CheckInModal({
                           return next;
                         })
                       }
-                      className="h-4 w-4 rounded border-black/20 dark:border-white/30"
+                      className="h-4 w-4 rounded border-linea-fuerte"
                     />
                     <span
                       className={clsx(
-                        cumplidos.has(hito.id) && "text-neutral-400 line-through"
+                        cumplidos.has(hito.id) && "text-tenue line-through"
                       )}
                     >
                       {hito.titulo}
@@ -189,15 +189,15 @@ function CheckInModal({
             </div>
           ) : (
             <div className="space-y-2">
-              <label className="text-xs font-medium text-neutral-500">
+              <label className="text-xs font-medium text-tenue">
                 Valor actual{" "}
-                <span className="text-neutral-400">
+                <span className="text-tenue">
                   (meta: {formatValor(kr.valor_meta, kr.tipo_medicion)})
                 </span>
               </label>
               <div className="flex items-center gap-2">
                 {kr.tipo_medicion === "moneda" && (
-                  <span className="text-sm text-neutral-500">$</span>
+                  <span className="text-sm text-tenue">$</span>
                 )}
                 <input
                   name="valor_registrado"
@@ -205,10 +205,10 @@ function CheckInModal({
                   step="any"
                   value={valor}
                   onChange={(e) => setValor(Number(e.target.value))}
-                  className="w-32 rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20"
+                  className="w-32 rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm"
                 />
                 {kr.tipo_medicion === "porcentaje" && (
-                  <span className="text-sm text-neutral-500">%</span>
+                  <span className="text-sm text-tenue">%</span>
                 )}
                 <QuickSteps
                   tipo={kr.tipo_medicion}
@@ -216,7 +216,7 @@ function CheckInModal({
                 />
               </div>
               {kr.tipo_medicion === "moneda" && (
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-tenue">
                   {formatValor(valor, "moneda")}
                 </p>
               )}
@@ -224,7 +224,7 @@ function CheckInModal({
           )}
 
           <div className="space-y-1.5">
-            <span className="text-xs font-medium text-neutral-500">Estado</span>
+            <span className="text-xs font-medium text-tenue">Estado</span>
             <div className="grid grid-cols-3 gap-2">
               {SEMAFORO_OPCIONES.map((op) => (
                 <button
@@ -239,11 +239,11 @@ function CheckInModal({
                         : op.valor === "amarillo"
                           ? "border-amber-500 bg-amber-500/10"
                           : "border-red-500 bg-red-500/10"
-                      : "border-black/10 hover:border-black/30 dark:border-white/15 dark:hover:border-white/40"
+                      : "border-linea hover:border-oxford/50"
                   )}
                 >
                   <span className="block text-sm font-semibold">{op.label}</span>
-                  <span className="block text-xs text-neutral-500">{op.sub}</span>
+                  <span className="block text-xs text-tenue">{op.sub}</span>
                 </button>
               ))}
             </div>
@@ -251,7 +251,7 @@ function CheckInModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium text-neutral-500">
+            <label className="text-xs font-medium text-tenue">
               ¿Qué bloqueos o necesidades tenés para presentar en la reunión LOM?
               {requiereComentario && (
                 <span className="ml-1 text-red-600">(obligatorio)</span>
@@ -261,7 +261,7 @@ function CheckInModal({
               name="comentario_bloqueos"
               rows={2}
               required={requiereComentario}
-              className="w-full rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20"
+              className="w-full rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm"
             />
           </div>
 
@@ -270,7 +270,7 @@ function CheckInModal({
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+            className="w-full rounded-md bg-oxford px-3 py-2 text-sm font-medium text-white transition hover:bg-oxford-fuerte disabled:opacity-50"
           >
             {pending ? "Guardando…" : "Guardar check-in"}
           </button>
@@ -334,12 +334,12 @@ export function CheckInExpress({
         className={clsx(
           "flex flex-col gap-2 rounded-lg border p-4",
           pendiente
-            ? "border-black/15 dark:border-white/20"
-            : "border-black/10 opacity-70 dark:border-white/10"
+            ? "border-linea"
+            : "border-linea opacity-70"
         )}
       >
         <div className="flex items-start justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          <p className="text-xs font-semibold uppercase tracking-wide text-tenue">
             {kr.okr_trimestral?.area}
           </p>
           <span className="flex items-center gap-1.5">
@@ -351,24 +351,24 @@ export function CheckInExpress({
 
         {kr.tipo_medicion !== "hitos" ? (
           <div className="space-y-1">
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-linea">
               <div
-                className="h-full rounded-full bg-neutral-900 dark:bg-white"
+                className="h-full rounded-full bg-oxford"
                 style={{ width: `${progresoPct(kr)}%` }}
               />
             </div>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-tenue">
               {formatValor(kr.valor_actual, kr.tipo_medicion)} /{" "}
               {formatValor(kr.valor_meta, kr.tipo_medicion)}
             </p>
           </div>
         ) : (
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-tenue">
             {hitosCumplidos} / {kr.hitos_kr.length} hitos cumplidos
           </p>
         )}
 
-        <p className="text-xs text-neutral-400">
+        <p className="text-xs text-tenue">
           {ultimo
             ? `Último check-in ${formatDistanceToNow(new Date(ultimo.creado_at), {
                 addSuffix: true,
@@ -383,8 +383,8 @@ export function CheckInExpress({
           className={clsx(
             "mt-auto rounded-md px-3 py-1.5 text-sm font-medium transition",
             pendiente
-              ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-              : "border border-black/15 text-neutral-600 dark:border-white/20 dark:text-neutral-300"
+              ? "bg-oxford text-white"
+              : "border border-linea text-tenue border-linea "
           )}
         >
           {pendiente ? "Cargar check-in (2 min)" : "Actualizar check-in"}
@@ -398,16 +398,16 @@ export function CheckInExpress({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold">Check-in Express</h1>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-tenue">
             {trimestre} {anio} · carga semanal en menos de 2 minutos por KR.
           </p>
         </div>
         <label className="flex items-center gap-2 text-sm">
-          <span className="text-neutral-500">Responsable:</span>
+          <span className="text-tenue">Responsable:</span>
           <select
             value={responsable}
             onChange={(e) => setResponsable(e.target.value)}
-            className="rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20 dark:bg-neutral-900"
+            className="rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm"
           >
             <option value="Todos">Todos</option>
             {responsables.map((r) => (
@@ -426,14 +426,14 @@ export function CheckInExpress({
       )}
 
       {visibles.length === 0 && (
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-tenue">
           No hay Key Results en {trimestre} {anio} para este responsable.
         </p>
       )}
 
       {pendientes.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-tenue">
             Pendientes esta semana ({pendientes.length})
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -444,7 +444,7 @@ export function CheckInExpress({
 
       {alDia.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-tenue">
             Al día ({alDia.length})
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

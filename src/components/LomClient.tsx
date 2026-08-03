@@ -13,7 +13,7 @@ import { SemaforoBadge } from "@/components/SemaforoBadge";
 import { RentabilityBadge } from "@/components/RentabilityBadge";
 import { Sparkline } from "@/components/Sparkline";
 import { formatValor, hasAlertaRentabilidad } from "@/lib/kr-logic";
-import { generarResumenLom } from "@/lib/resumen-lom";
+import { generarResumenLom, generarResumenChat } from "@/lib/resumen-lom";
 import { AREAS, TRIMESTRES } from "@/lib/types";
 import type { CheckIn, CompromisoLom, KeyResultCompleto } from "@/lib/types";
 
@@ -35,10 +35,10 @@ function CompromisosLom({
   );
 
   return (
-    <div className="space-y-1.5 border-t border-black/10 pt-2 dark:border-white/10">
-      <p className="text-xs font-semibold text-neutral-500">Compromisos LOM</p>
+    <div className="space-y-1.5 border-t border-linea pt-2">
+      <p className="text-xs font-semibold text-tenue">Compromisos LOM</p>
       {compromisos.length === 0 && (
-        <p className="text-xs text-neutral-400">Sin compromisos anotados.</p>
+        <p className="text-xs text-tenue">Sin compromisos anotados.</p>
       )}
       <ul className="space-y-1">
         {compromisos.map((c) => (
@@ -52,9 +52,9 @@ function CompromisosLom({
                   toggleCompromisoLom(c.id, e.target.checked);
                 })
               }
-              className="mt-0.5 h-3.5 w-3.5 rounded border-black/20 dark:border-white/30"
+              className="mt-0.5 h-3.5 w-3.5 rounded border-linea-fuerte"
             />
-            <span className={clsx(c.cumplido && "text-neutral-400 line-through")}>
+            <span className={clsx(c.cumplido && "text-tenue line-through")}>
               {c.descripcion}
             </span>
           </li>
@@ -64,12 +64,12 @@ function CompromisosLom({
         <input
           name="descripcion"
           placeholder='Ej: "Mateo revisa presupuesto con Dolores"'
-          className="w-full rounded-md border border-black/15 bg-transparent px-2 py-1 text-xs dark:border-white/20"
+          className="w-full rounded-md border border-linea bg-transparent px-2 py-1 text-xs"
         />
         <button
           type="submit"
           disabled={adding}
-          className="shrink-0 rounded-md border border-black/15 px-2 py-1 text-xs font-medium disabled:opacity-50 dark:border-white/20"
+          className="shrink-0 rounded-md border border-linea px-2 py-1 text-xs font-medium disabled:opacity-50"
         >
           {adding ? "…" : "Anotar"}
         </button>
@@ -107,33 +107,33 @@ function ResumenModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-linea/600 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl border border-black/10 bg-white shadow-xl dark:border-white/10 dark:bg-neutral-900">
-        <div className="flex items-center justify-between border-b border-black/10 px-6 py-4 dark:border-white/10">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-xl border border-linea bg-panel shadow-xl">
+        <div className="flex items-center justify-between border-b border-linea px-6 py-4">
           <h2 className="text-base font-semibold">Resumen ejecutivo LOM</h2>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={copiar}
-              className="rounded-md border border-black/15 px-3 py-1.5 text-sm font-medium dark:border-white/20"
+              className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium"
             >
               {copiado ? "✓ Copiado" : "Copiar resumen"}
             </button>
             <button
               type="button"
               onClick={descargar}
-              className="rounded-md border border-black/15 px-3 py-1.5 text-sm font-medium dark:border-white/20"
+              className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium"
             >
               Descargar .md
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+              className="rounded-md p-1 text-tenue hover:text-foreground"
               aria-label="Cerrar"
             >
               ✕
@@ -163,6 +163,7 @@ export function LomClient({
   const [trimestre, setTrimestre] = useState<(typeof TRIM_OPTIONS)[number]>("Todos");
   const [area, setArea] = useState<(typeof AREA_OPTIONS)[number]>("Todas");
   const [resumen, setResumen] = useState<string | null>(null);
+  const [copiadoChat, setCopiadoChat] = useState<"ok" | "error" | null>(null);
 
   const porKr = useMemo(() => {
     const map = new Map<string, CheckIn[]>();
@@ -215,19 +216,44 @@ export function LomClient({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold">Modo LOM</h1>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-tenue">
             Tablero de dirección: solo lo que necesita atención.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() =>
-            setResumen(generarResumenLom(filtrados, checkIns, compromisos))
-          }
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-500"
-        >
-          ✦ Generar resumen LOM
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={async () => {
+              const texto = generarResumenChat(filtrados, checkIns, compromisos);
+              try {
+                await navigator.clipboard.writeText(texto);
+                setCopiadoChat("ok");
+              } catch {
+                // Pasa si el navegador bloquea el portapapeles: mostramos el
+                // resumen en el modal para que se pueda copiar a mano.
+                setCopiadoChat("error");
+                setResumen(texto);
+              }
+              setTimeout(() => setCopiadoChat(null), 2500);
+            }}
+            className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium transition hover:border-oxford/50"
+          >
+            {copiadoChat === "ok"
+              ? "✓ Copiado"
+              : copiadoChat === "error"
+                ? "Copialo del cuadro"
+                : "📋 Copiar para Slack / WhatsApp"}
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setResumen(generarResumenLom(filtrados, checkIns, compromisos))
+            }
+            className="rounded-md bg-oxford px-3 py-1.5 text-sm font-medium text-white transition hover:bg-oxford-fuerte"
+          >
+            ✦ Generar resumen LOM
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
@@ -247,10 +273,10 @@ export function LomClient({
               tone === "red" && "border-red-500/30 bg-red-500/5"
             )}
           >
-            <p className="text-xs font-medium text-neutral-500">{label}</p>
+            <p className="text-xs font-medium text-tenue">{label}</p>
             <p className="text-2xl font-semibold">
               {pct(n)}%{" "}
-              <span className="text-sm font-normal text-neutral-500">
+              <span className="text-sm font-normal text-tenue">
                 ({n} de {total})
               </span>
             </p>
@@ -263,7 +289,7 @@ export function LomClient({
           <select
             value={trimestre}
             onChange={(e) => setTrimestre(e.target.value as typeof trimestre)}
-            className="rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20 dark:bg-neutral-900"
+            className="rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm"
           >
             {TRIM_OPTIONS.map((t) => (
               <option key={t} value={t}>
@@ -274,7 +300,7 @@ export function LomClient({
           <select
             value={area}
             onChange={(e) => setArea(e.target.value as typeof area)}
-            className="rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20 dark:bg-neutral-900"
+            className="rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm"
           >
             {AREA_OPTIONS.map((a) => (
               <option key={a} value={a}>
@@ -288,7 +314,7 @@ export function LomClient({
             type="checkbox"
             checked={soloDesvios}
             onChange={(e) => setSoloDesvios(e.target.checked)}
-            className="h-4 w-4 rounded border-black/20 dark:border-white/30"
+            className="h-4 w-4 rounded border-linea-fuerte"
           />
           <span className="font-medium">Solo desvíos (amarillo/rojo)</span>
         </label>
@@ -317,14 +343,14 @@ export function LomClient({
                   ? "border-red-500/40"
                   : kr.estado_semaforo === "amarillo"
                     ? "border-amber-500/40"
-                    : "border-black/10 dark:border-white/10"
+                    : "border-linea"
               )}
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-tenue">
                   {kr.okr_trimestral?.area ?? "Sin área"}
                   {kr.okr_trimestral?.responsable && (
-                    <span className="ml-2 rounded-full bg-black/5 px-2 py-0.5 font-medium normal-case tracking-normal dark:bg-white/10">
+                    <span className="ml-2 rounded-full bg-linea/60 px-2 py-0.5 font-medium normal-case tracking-normal">
                       {kr.okr_trimestral.responsable}
                     </span>
                   )}
@@ -349,7 +375,7 @@ export function LomClient({
                     valorMeta={kr.tipo_medicion === "hitos" ? 100 : kr.valor_meta}
                   />
                 </div>
-                <p className="shrink-0 text-xs text-neutral-500">
+                <p className="shrink-0 text-xs text-tenue">
                   {kr.tipo_medicion === "hitos"
                     ? `${kr.hitos_kr.filter((h) => h.cumplido).length}/${kr.hitos_kr.length} hitos`
                     : `${formatValor(kr.valor_actual, kr.tipo_medicion)} / ${formatValor(kr.valor_meta, kr.tipo_medicion)}`}
@@ -364,7 +390,7 @@ export function LomClient({
               )}
 
               {ultimoConComentario && (
-                <blockquote className="border-l-2 border-black/20 pl-2 text-xs italic text-neutral-500 dark:border-white/30">
+                <blockquote className="border-l-2 border-linea-fuerte pl-2 text-xs italic text-tenue">
                   &ldquo;{ultimoConComentario.comentario_bloqueos}&rdquo;
                   <span className="not-italic"> — {ultimoConComentario.usuario}</span>
                 </blockquote>

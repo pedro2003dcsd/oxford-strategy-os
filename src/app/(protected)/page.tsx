@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { KeyResultCompleto } from "@/lib/types";
+import type { CheckIn, KeyResultCompleto, ProyectoSolop } from "@/lib/types";
 import { DashboardClient } from "@/components/DashboardClient";
 
 export default async function DashboardPage() {
@@ -10,6 +10,7 @@ export default async function DashboardPage() {
     .select(
       `*,
       hitos_kr ( * ),
+      iniciativas ( * ),
       okr_trimestral (
         *,
         okr_anual (
@@ -22,11 +23,26 @@ export default async function DashboardPage() {
 
   if (error) {
     return (
-      <p className="text-sm text-red-600">
+      <p className="text-sm text-red-700 dark:text-red-400">
         No se pudieron cargar los Key Results: {error.message}
       </p>
     );
   }
 
-  return <DashboardClient krs={(data ?? []) as unknown as KeyResultCompleto[]} />;
+  const krs = (data ?? []) as unknown as KeyResultCompleto[];
+
+  // El drawer muestra el historial de check-ins y el detalle de SOLOP, así que
+  // los traemos acá y no en una segunda vuelta desde el cliente.
+  const [{ data: checkInsData }, { data: proyectosData }] = await Promise.all([
+    supabase.from("check_ins").select("*").order("creado_at", { ascending: true }),
+    supabase.from("proyectos_solop").select("*"),
+  ]);
+
+  return (
+    <DashboardClient
+      krs={krs}
+      checkIns={(checkInsData ?? []) as CheckIn[]}
+      proyectos={(proyectosData ?? []) as ProyectoSolop[]}
+    />
+  );
 }

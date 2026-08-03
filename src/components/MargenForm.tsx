@@ -21,10 +21,10 @@ export function MargenForm({
   return (
     <form
       action={formAction}
-      className="space-y-2 rounded-lg border border-black/10 p-4 dark:border-white/10"
+      className="space-y-2 rounded-lg border border-linea p-4"
     >
       <h3 className="text-sm font-semibold">Margen real (SOLOP)</h3>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-tenue">
         Carga manual — margen esperado: {margenEsperado}%
       </p>
       <div className="flex items-center gap-2">
@@ -34,13 +34,13 @@ export function MargenForm({
           step="any"
           defaultValue={margenActual ?? ""}
           placeholder="Ej: 62.5"
-          className="w-28 rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20"
+          className="w-28 rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm"
         />
-        <span className="text-sm text-neutral-500">%</span>
+        <span className="text-sm text-tenue">%</span>
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md border border-black/15 px-3 py-1.5 text-sm font-medium disabled:opacity-50 dark:border-white/20"
+          className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         >
           {pending ? "Guardando…" : "Guardar"}
         </button>

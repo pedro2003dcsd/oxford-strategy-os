@@ -65,7 +65,7 @@ export function ScoutResponseViewer({
                   key={i}
                   href={`/kr/${ref.id}`}
                   className={clsx(
-                    "mx-0.5 inline-flex items-center gap-1.5 rounded-md bg-black/5 px-1.5 py-0.5 align-baseline transition hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20",
+                    "mx-0.5 inline-flex items-center gap-1.5 rounded-md bg-linea/60 px-1.5 py-0.5 align-baseline transition hover:bg-linea",
                     negrita && "font-semibold"
                   )}
                   title={`${ESTADO_LABEL[ref.semaforo]} · ${ref.area} · ${ref.responsable}`}
@@ -133,7 +133,7 @@ export function ScoutResponseViewer({
                 )}
                 style={{ marginLeft: `${sangria * 0.75}rem` }}
               >
-                <span className="select-none text-neutral-400">•</span>
+                <span className="select-none text-tenue">•</span>
                 <span>{inline(l.trimStart().replace(/^[-*]\s+/, ""), i)}</span>
               </p>
             );
@@ -147,7 +147,7 @@ export function ScoutResponseViewer({
           }
           if (l.startsWith("_") && l.endsWith("_") && l.length > 2) {
             return (
-              <p key={i} className="text-xs italic text-neutral-500">
+              <p key={i} className="text-xs italic text-tenue">
                 {l.slice(1, -1)}
               </p>
             );
@@ -170,8 +170,8 @@ export function ScoutResponseViewer({
       </div>
 
       {(krsMencionados.length > 0 || areasMencionadas.length > 0) && (
-        <div className="space-y-2 border-t border-black/10 pt-3 dark:border-white/10">
-          <p className="text-xs font-medium text-neutral-500">Ir a</p>
+        <div className="space-y-2 border-t border-linea pt-3">
+          <p className="text-xs font-medium text-tenue">Ir a</p>
           {krsMencionados.length > 0 && (
             <div className="grid gap-1.5 sm:grid-cols-2">
               {krsMencionados.map((ref) => (
@@ -179,7 +179,7 @@ export function ScoutResponseViewer({
                   key={ref.id}
                   href={`/kr/${ref.id}`}
                   className={clsx(
-                    "group flex items-start gap-2 rounded-lg border bg-white/50 px-2.5 py-2 transition dark:bg-white/5",
+                    "group flex items-start gap-2 rounded-lg border bg-panel px-2.5 py-2 transition ",
                     CARD_CLASSES[ref.semaforo]
                   )}
                 >
@@ -193,7 +193,7 @@ export function ScoutResponseViewer({
                     <span className="block truncate text-xs font-medium group-hover:underline">
                       {ref.titulo}
                     </span>
-                    <span className="block truncate text-[11px] text-neutral-500">
+                    <span className="block truncate text-[11px] text-tenue">
                       {ESTADO_LABEL[ref.semaforo]} · {ref.area} · {ref.responsable}
                     </span>
                   </span>
@@ -207,7 +207,7 @@ export function ScoutResponseViewer({
                 <Link
                   key={area}
                   href="/okrs"
-                  className="rounded-full border border-black/10 px-2.5 py-1 text-[11px] text-neutral-600 transition hover:border-black/25 hover:text-neutral-900 dark:border-white/15 dark:text-neutral-300 dark:hover:border-white/40 dark:hover:text-white"
+                  className="rounded-full border border-linea px-2.5 py-1 text-[11px] text-tenue transition hover:border-oxford/50 hover:text-foreground"
                 >
                   {area}
                 </Link>

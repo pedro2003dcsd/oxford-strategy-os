@@ -66,8 +66,38 @@ export interface KeyResult {
   margen_utilidad_esperado: number;
   margen_actual_pct: number | null;
   margen_actualizado_at: string | null;
+  link_trabajo: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export const ESTADOS_INICIATIVA = [
+  "pendiente",
+  "en_curso",
+  "bloqueado",
+  "completado",
+] as const;
+export type EstadoIniciativa = (typeof ESTADOS_INICIATIVA)[number];
+
+export const ESTADO_INICIATIVA_LABELS: Record<EstadoIniciativa, string> = {
+  pendiente: "Pendiente",
+  en_curso: "En curso",
+  bloqueado: "Bloqueado",
+  completado: "Completado",
+};
+
+/** Trabajo concreto del POD que mueve la aguja de un KR. */
+export interface Iniciativa {
+  id: string;
+  kr_id: string;
+  titulo: string;
+  responsable: string | null;
+  estado: EstadoIniciativa;
+  fecha_limite: string | null;
+  link_recurso: string | null;
+  orden: number;
+  creado_at: string;
+  actualizado_at: string;
 }
 
 export interface HitoKr {
@@ -120,4 +150,7 @@ export interface OkrTrimestralConAncestros extends OkrTrimestral {
 export interface KeyResultCompleto extends KeyResult {
   hitos_kr: HitoKr[];
   okr_trimestral: OkrTrimestralConAncestros | null;
+  /** Opcional: las consultas de Supabase se castean, así que no todas las
+   * pantallas traen las iniciativas. Leerlas siempre con `?? []`. */
+  iniciativas?: Iniciativa[];
 }

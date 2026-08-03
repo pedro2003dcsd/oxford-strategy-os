@@ -6,8 +6,8 @@ import { TIPOS_REPORTE, TIPO_REPORTE_LABELS, type TipoReporte } from "@/lib/info
 import { AREAS, TRIMESTRES } from "@/lib/types";
 
 const inputClass =
-  "rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20 dark:bg-neutral-900";
-const labelClass = "text-xs font-medium text-neutral-500";
+  "rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm border-linea ";
+const labelClass = "text-xs font-medium text-tenue";
 
 const MENSAJES_CARGA = [
   "Leyendo los check-ins de la semana…",
@@ -52,7 +52,7 @@ function MarkdownView({ texto }: { texto: string }) {
         }
         if (l.startsWith("## ")) {
           return (
-            <h2 key={i} className="border-b border-black/10 pb-1 pt-4 text-base font-semibold dark:border-white/10">
+            <h2 key={i} className="border-b border-linea pb-1 pt-4 text-base font-semibold">
               {inline(l.slice(3), i)}
             </h2>
           );
@@ -76,7 +76,7 @@ function MarkdownView({ texto }: { texto: string }) {
               )}
               style={{ marginLeft: `${sangria * 0.75}rem` }}
             >
-              <span className="select-none text-neutral-400">•</span>
+              <span className="select-none text-tenue">•</span>
               {inline(l.trimStart().replace(/^[-*]\s+/, ""), i)}
             </p>
           );
@@ -96,7 +96,7 @@ function MarkdownView({ texto }: { texto: string }) {
         }
         if (l.startsWith("_") && l.endsWith("_") && l.length > 2) {
           return (
-            <p key={i} className="text-xs italic text-neutral-500">
+            <p key={i} className="text-xs italic text-tenue">
               {l.slice(1, -1)}
             </p>
           );
@@ -204,13 +204,13 @@ export function AIReports({
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold">Informes automáticos</h1>
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-tenue">
           Resúmenes ejecutivos generados a partir de los check-ins, desvíos y
           rentabilidad cargados en el sistema.
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-black/10 p-4 print:hidden dark:border-white/10">
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-linea p-4 print:hidden">
         <div className="space-y-1">
           <label className={labelClass}>Tipo de reporte</label>
           <select
@@ -263,7 +263,7 @@ export function AIReports({
           type="button"
           onClick={generar}
           disabled={cargando}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:opacity-50"
+          className="rounded-md bg-oxford px-4 py-2 text-sm font-medium text-white transition hover:bg-oxford-fuerte disabled:opacity-50"
         >
           {cargando ? "Generando…" : "✨ Generar informe con IA"}
         </button>
@@ -276,9 +276,9 @@ export function AIReports({
       )}
 
       {cargando && (
-        <div className="flex items-center gap-3 rounded-lg border border-indigo-500/30 bg-indigo-500/5 px-4 py-6">
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
-          <p className="text-sm text-indigo-700 dark:text-indigo-300">
+        <div className="flex items-center gap-3 rounded-lg border border-oxford/30 bg-oxford-suave px-4 py-6">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-oxford border-t-transparent" />
+          <p className="text-sm text-oxford">
             {MENSAJES_CARGA[mensajeIdx]}
           </p>
         </div>
@@ -292,42 +292,42 @@ export function AIReports({
                 className={clsx(
                   "rounded-full px-2.5 py-1 text-xs font-medium",
                   fuente === "ia"
-                    ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
-                    : "bg-neutral-500/10 text-neutral-600 dark:text-neutral-300"
+                    ? "bg-oxford-suave text-oxford"
+                    : "bg-neutral-500/10 text-tenue"
                 )}
               >
                 {fuente === "ia" ? "✦ Redactado con IA" : "Informe automático"}
               </span>
               {motivo && (
-                <span className="text-xs text-neutral-500">{motivo}</span>
+                <span className="text-xs text-tenue">{motivo}</span>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => setEditando((v) => !v)}
-                className="rounded-md border border-black/15 px-3 py-1.5 text-sm font-medium dark:border-white/20"
+                className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium"
               >
                 {editando ? "Ver formateado" : "Editar texto"}
               </button>
               <button
                 type="button"
                 onClick={copiar}
-                className="rounded-md border border-black/15 px-3 py-1.5 text-sm font-medium dark:border-white/20"
+                className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium"
               >
                 {copiado ? "✓ Copiado" : "Copiar"}
               </button>
               <button
                 type="button"
                 onClick={descargarMd}
-                className="rounded-md border border-black/15 px-3 py-1.5 text-sm font-medium dark:border-white/20"
+                className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium"
               >
                 Descargar .md
               </button>
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="rounded-md border border-black/15 px-3 py-1.5 text-sm font-medium dark:border-white/20"
+                className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium"
               >
                 Descargar PDF
               </button>
@@ -339,12 +339,12 @@ export function AIReports({
               value={markdown}
               onChange={(e) => setMarkdown(e.target.value)}
               rows={28}
-              className="w-full rounded-lg border border-black/15 bg-transparent p-4 font-mono text-sm leading-relaxed dark:border-white/20"
+              className="w-full rounded-lg border border-linea bg-transparent p-4 font-mono text-sm leading-relaxed"
             />
           ) : (
             <div
               ref={impresionRef}
-              className="rounded-lg border border-black/10 bg-white p-6 dark:border-white/10 dark:bg-neutral-900 print:border-0 print:p-0"
+              className="rounded-lg border border-linea bg-panel p-6 print:border-0 print:p-0"
             >
               <MarkdownView texto={markdown} />
             </div>

@@ -120,24 +120,24 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
   return (
     <div
       className={clsx(
-        "flex flex-col overflow-hidden rounded-xl border border-black/10 bg-white dark:border-white/10 dark:bg-neutral-900",
+        "flex flex-col overflow-hidden rounded-xl border border-linea bg-panel border-linea ",
         variant === "page" ? "h-[calc(100vh-13rem)] min-h-[28rem]" : "h-full"
       )}
     >
       {/* Header */}
-      <header className="flex items-center justify-between gap-3 border-b border-black/10 px-4 py-3 dark:border-white/10">
+      <header className="flex items-center justify-between gap-3 border-b border-linea px-4 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm text-white">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-oxford text-sm text-white">
             ✦
           </span>
           <div>
             <p className="text-sm font-semibold leading-tight">
               Scout AI{" "}
-              <span className="font-normal text-neutral-500">
+              <span className="font-normal text-tenue">
                 · Asistente de Oxford
               </span>
             </p>
-            <p className="flex items-center gap-1.5 text-xs text-neutral-500">
+            <p className="flex items-center gap-1.5 text-xs text-tenue">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               En línea
             </p>
@@ -150,7 +150,7 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
               setMensajes([]);
               setError(null);
             }}
-            className="rounded-md px-2 py-1 text-xs text-neutral-500 transition hover:bg-black/5 hover:text-neutral-900 dark:hover:bg-white/10 dark:hover:text-white"
+            className="rounded-md px-2 py-1 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
           >
             Limpiar
           </button>
@@ -165,7 +165,7 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
               <p className="text-sm font-medium">
                 ¿Qué querés saber del trimestre?
               </p>
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-tenue">
                 Preguntá en lenguaje natural. Scout lee los OKRs, los check-ins y
                 la rentabilidad cargados en el sistema.
               </p>
@@ -176,7 +176,7 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
                   key={p.texto}
                   type="button"
                   onClick={() => enviar(`${p.emoji} ${p.texto}`)}
-                  className="rounded-lg border border-black/10 px-3 py-2.5 text-left text-sm transition hover:border-black/25 hover:bg-black/[0.03] dark:border-white/10 dark:hover:border-white/30 dark:hover:bg-white/5"
+                  className="rounded-lg border border-linea px-3 py-2.5 text-left text-sm transition hover:border-oxford/50 hover:bg-linea/40"
                 >
                   <span className="mr-1.5">{p.emoji}</span>
                   {p.texto}
@@ -189,13 +189,13 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
         {mensajes.map((m) =>
           m.role === "user" ? (
             <div key={m.id} className="flex justify-end">
-              <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-indigo-600 px-3.5 py-2 text-sm text-white">
+              <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-oxford px-3.5 py-2 text-sm text-white">
                 {m.content}
               </p>
             </div>
           ) : (
             <div key={m.id} className="flex gap-2.5">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[11px] text-white">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-oxford text-[11px] text-white">
                 ✦
               </span>
               <div className="min-w-0 flex-1 space-y-2">
@@ -204,7 +204,7 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
                   referencias={m.referencias ?? []}
                 />
                 {m.fuente === "reglas" && (
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-tenue">
                     Respuesta automática sobre los datos del sistema
                     {m.motivo ? ` — ${m.motivo}` : ""}
                   </p>
@@ -216,11 +216,11 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
 
         {cargando && (
           <div className="flex items-center gap-2.5">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[11px] text-white">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-oxford text-[11px] text-white">
               ✦
             </span>
-            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
-            <p className="text-sm text-neutral-500">
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-oxford border-t-transparent" />
+            <p className="text-sm text-tenue">
               {MENSAJES_CARGA[mensajeIdx]}
             </p>
           </div>
@@ -234,7 +234,7 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
       </div>
 
       {/* Input */}
-      <div className="border-t border-black/10 px-4 py-3 dark:border-white/10">
+      <div className="border-t border-linea px-4 py-3">
         {!vacio && (
           <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">
             {PROMPTS_RAPIDOS.map((p) => (
@@ -243,7 +243,7 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
                 type="button"
                 disabled={cargando}
                 onClick={() => enviar(`${p.emoji} ${p.texto}`)}
-                className="shrink-0 rounded-full border border-black/10 px-2.5 py-1 text-xs text-neutral-600 transition hover:border-black/25 hover:text-neutral-900 disabled:opacity-50 dark:border-white/15 dark:text-neutral-300 dark:hover:border-white/40 dark:hover:text-white"
+                className="shrink-0 rounded-full border border-linea px-2.5 py-1 text-xs text-tenue transition hover:border-oxford/50 hover:text-foreground disabled:opacity-50"
               >
                 {p.emoji} {p.texto}
               </button>
@@ -269,12 +269,12 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
             }}
             rows={1}
             placeholder="Preguntale a Scout sobre los OKRs, los check-ins o la rentabilidad…"
-            className="max-h-32 min-h-[2.5rem] flex-1 resize-none rounded-lg border border-black/15 bg-transparent px-3 py-2 text-sm outline-none transition focus:border-indigo-500 dark:border-white/20"
+            className="max-h-32 min-h-[2.5rem] flex-1 resize-none rounded-lg border border-linea bg-transparent px-3 py-2 text-sm outline-none transition focus:border-oxford"
           />
           <button
             type="submit"
             disabled={cargando || entrada.trim() === ""}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white transition hover:bg-indigo-500 disabled:opacity-40"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-oxford text-white transition hover:bg-oxford-fuerte disabled:opacity-40"
             aria-label="Enviar"
           >
             ↑

@@ -232,6 +232,58 @@ begin
   insert into proyectos_solop (cliente, tipo_contrato,
     horas_presupuestadas, horas_consumidas, facturacion_total, costo_operativo)
   values ('Ueno 2026', 'Fee', 150, 60, 18000000, 5040000);
+
+  -- ----------------------------------------------------------
+  -- 10. Iniciativas: el trabajo concreto detrás de cada KR
+  -- ----------------------------------------------------------
+  insert into iniciativas (kr_id, titulo, responsable, estado, fecha_limite, orden)
+  values
+    (kr_batistella, 'Adaptar los 6 videos de campaña a formato vertical 9:16',
+     'Matías Merlo', 'bloqueado', current_date - 3, 1),
+    (kr_batistella, 'Reconfigurar públicos de retargeting en Meta Ads',
+     'Ayelén Bruno', 'completado', current_date - 8, 2),
+    (kr_batistella, 'Test A/B de creatividades en carrusel',
+     'Ayelén Bruno', 'en_curso', current_date + 5, 3),
+    (kr_batistella, 'Informe quincenal de ROAS para el cliente',
+     'Ayelén Bruno', 'pendiente', current_date + 10, 4);
+
+  select id into kr from key_results
+    where titulo = 'Entregar el 100% de los kits audiovisuales y creativos de campaña a tiempo';
+  insert into iniciativas (kr_id, titulo, responsable, estado, fecha_limite, orden)
+  values
+    (kr, 'Checklist de entrega por campaña', 'Matías Merlo', 'completado', current_date - 12, 1),
+    (kr, 'Plantillas maestras en Figma para kits de campaña', 'Matías Merlo', 'en_curso', current_date + 7, 2),
+    (kr, 'Priorizar la cola de pedidos Ad-Hoc con Planificación',
+     'Laura Bonetto', 'bloqueado', current_date - 1, 3);
+
+  select id into kr from key_results
+    where titulo = 'Cerrar 3 nuevos contratos integrales de Fee mensual';
+  insert into iniciativas (kr_id, titulo, responsable, estado, fecha_limite, orden)
+  values
+    (kr, 'Cierre legal del contrato Ueno 2026', 'Cristóbal Dávalos', 'completado', current_date - 20, 1),
+    (kr, 'Propuesta integral para el tercer prospecto', 'Cristóbal Dávalos', 'en_curso', current_date + 12, 2);
+
+  select id into kr from key_results
+    where titulo = 'Implementar el módulo de control de horas en SOLOP en el 100% de los PODs';
+  insert into iniciativas (kr_id, titulo, responsable, estado, fecha_limite, orden)
+  values
+    (kr, 'Cargar la plantilla de tarifas por rol', 'Laura Bonetto', 'completado', current_date - 18, 1),
+    (kr, 'Asignar capacidad de horas por POD', 'Laura Bonetto', 'completado', current_date - 9, 2),
+    (kr, 'Definir la auditoría quincenal de desvíos', 'Laura Bonetto', 'pendiente', current_date + 14, 3);
+
+  select id into kr from key_results
+    where titulo = '100% del equipo capacitado en herramientas de IA generativa';
+  insert into iniciativas (kr_id, titulo, responsable, estado, fecha_limite, orden)
+  values
+    (kr, 'Taller de IA generativa para Comercial y Digital', 'Mariana García Díaz', 'completado', current_date - 22, 1),
+    (kr, 'Módulo de práctica con casos reales para el POD de Arte', 'Mariana García Díaz', 'en_curso', current_date + 9, 2);
+
+  select id into kr from key_results
+    where titulo = 'Reducir el plazo medio de cobro a clientes de 45 a 25 días';
+  insert into iniciativas (kr_id, titulo, responsable, estado, fecha_limite, orden)
+  values
+    (kr, 'Recordatorio automático de vencimientos', 'Dolores García Díaz', 'completado', current_date - 11, 1),
+    (kr, 'Revisión quincenal de cartera con Dirección', 'Dolores García Díaz', 'pendiente', current_date + 6, 2);
 end $$;
 
 commit;

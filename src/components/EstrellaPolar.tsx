@@ -18,30 +18,30 @@ export function EstrellaPolar({ krs }: { krs: KeyResultCompleto[] }) {
   const pct = Math.min(100, Math.round((clientesSobreMeta / META_CLIENTES) * 100));
 
   return (
-    <section className="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-5 dark:bg-indigo-500/10">
+    <section className="rounded-xl border border-oxford/30 bg-oxford-suave p-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+          <p className="text-xs font-semibold uppercase tracking-wide text-oxford">
             ★ Estrella Polar 2026
           </p>
           <h2 className="mt-1 text-lg font-semibold">
             {META_CLIENTES} clientes integrales con UB/Venta &gt; {META_MARGEN}%
           </h2>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-tenue">
             Clientes con margen real cargado sobre {META_MARGEN}%:{" "}
-            <span className="font-semibold text-neutral-900 dark:text-white">
+            <span className="font-semibold text-foreground">
               {clientesSobreMeta} / {META_CLIENTES}
             </span>
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="h-2 w-40 overflow-hidden rounded-full bg-indigo-500/15">
+          <div className="h-2 w-40 overflow-hidden rounded-full bg-oxford-suave">
             <div
-              className="h-full rounded-full bg-indigo-500 transition-all"
+              className="h-full rounded-full bg-oxford transition-all"
               style={{ width: `${pct}%` }}
             />
           </div>
-          <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+          <span className="text-sm font-semibold text-oxford">
             {pct}%
           </span>
         </div>

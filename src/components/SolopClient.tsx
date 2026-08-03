@@ -24,8 +24,8 @@ import type { KeyResult, ProyectoSolop } from "@/lib/types";
 const META_CLIENTES = 20;
 
 const inputClass =
-  "w-full rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20";
-const labelClass = "text-xs font-medium text-neutral-500";
+  "w-full rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm";
+const labelClass = "text-xs font-medium text-tenue";
 
 const fmtPesos = (n: number) =>
   new Intl.NumberFormat("es-AR", {
@@ -35,7 +35,7 @@ const fmtPesos = (n: number) =>
   }).format(n);
 
 function EstadoBadge({ estado }: { estado: EstadoFinanciero | null }) {
-  if (!estado) return <span className="text-xs text-neutral-400">Sin datos</span>;
+  if (!estado) return <span className="text-xs text-tenue">Sin datos</span>;
   return (
     <span
       className={clsx(
@@ -54,12 +54,12 @@ function EstadoBadge({ estado }: { estado: EstadoFinanciero | null }) {
 function HorasBar({ proyecto }: { proyecto: ProyectoSolop }) {
   const ratio = ratioHoras(proyecto);
   if (ratio === null)
-    return <span className="text-xs text-neutral-400">Sin presupuesto</span>;
+    return <span className="text-xs text-tenue">Sin presupuesto</span>;
 
   const pct = Math.min(100, Math.round(ratio * 100));
   return (
     <div className="space-y-1">
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-linea">
         <div
           className={clsx(
             "h-full rounded-full transition-all",
@@ -72,7 +72,7 @@ function HorasBar({ proyecto }: { proyecto: ProyectoSolop }) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <p className="text-xs text-neutral-500">
+      <p className="text-xs text-tenue">
         {proyecto.horas_consumidas} / {proyecto.horas_presupuestadas} hs ({pct}%)
       </p>
     </div>
@@ -124,12 +124,12 @@ function ProyectoModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-linea/600 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-black/10 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-neutral-900">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-linea bg-panel p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold">
             {isEdit ? `Sincronizar SOLOP — ${proyecto.cliente}` : "Nuevo proyecto SOLOP"}
@@ -137,7 +137,7 @@ function ProyectoModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+            className="rounded-md p-1 text-tenue hover:text-foreground"
             aria-label="Cerrar"
           >
             ✕
@@ -186,7 +186,7 @@ function ProyectoModal({
                 </option>
               ))}
             </select>
-            <p className="text-xs text-neutral-400">
+            <p className="text-xs text-tenue">
               Si lo asociás, el margen real de este proyecto se sincroniza con el
               KR y dispara las alertas de rentabilidad.
             </p>
@@ -248,21 +248,21 @@ function ProyectoModal({
             </div>
           </div>
 
-          <div className="rounded-lg border border-black/10 bg-black/[0.02] p-3 text-sm dark:border-white/10 dark:bg-white/5">
-            <p className="mb-2 text-xs font-semibold text-neutral-500">
+          <div className="rounded-lg border border-linea bg-black/[0.02] p-3 text-sm">
+            <p className="mb-2 text-xs font-semibold text-tenue">
               Conciliación por hora-hombre
             </p>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div>
-                <p className="text-xs text-neutral-500">Facturación/h</p>
+                <p className="text-xs text-tenue">Facturación/h</p>
                 <p className="font-medium">{fph !== null ? fmtPesos(fph) : "—"}</p>
               </div>
               <div>
-                <p className="text-xs text-neutral-500">Costo/h</p>
+                <p className="text-xs text-tenue">Costo/h</p>
                 <p className="font-medium">{cph !== null ? fmtPesos(cph) : "—"}</p>
               </div>
               <div>
-                <p className="text-xs text-neutral-500">Margen real</p>
+                <p className="text-xs text-tenue">Margen real</p>
                 <p
                   className={clsx(
                     "font-semibold",
@@ -287,14 +287,14 @@ function ProyectoModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md border border-black/15 px-3 py-1.5 text-sm font-medium dark:border-white/20"
+              className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+              className="rounded-md bg-oxford px-3 py-1.5 text-sm font-medium text-white transition hover:bg-oxford-fuerte disabled:opacity-50"
             >
               {pending ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear proyecto"}
             </button>
@@ -350,14 +350,14 @@ export function SolopClient({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold">Torre de Control SOLOP</h1>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-tenue">
             Rentabilidad por cliente/proyecto — carga manual desde SOLOP.
           </p>
         </div>
         <button
           type="button"
           onClick={() => setModal({ abierto: true, proyecto: null })}
-          className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+          className="rounded-md bg-oxford px-3 py-1.5 text-sm font-medium text-white"
         >
           + Nuevo proyecto
         </button>
@@ -368,7 +368,7 @@ export function SolopClient({
           className={clsx(
             "rounded-xl border p-4",
             promedioUB === null
-              ? "border-black/10 dark:border-white/10"
+              ? "border-linea"
               : promedioUB >= META_MARGEN
                 ? "border-emerald-500/30 bg-emerald-500/5"
                 : promedioUB >= 50
@@ -376,20 +376,20 @@ export function SolopClient({
                   : "border-red-500/30 bg-red-500/5"
           )}
         >
-          <p className="text-xs font-medium text-neutral-500">
+          <p className="text-xs font-medium text-tenue">
             Utilidad bruta promedio (meta &gt;{META_MARGEN}%)
           </p>
           <p className="text-2xl font-semibold">
             {promedioUB !== null ? `${promedioUB}%` : "—"}
           </p>
         </div>
-        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-4">
-          <p className="text-xs font-medium text-neutral-500">
+        <div className="rounded-xl border border-oxford/30 bg-oxford-suave p-4">
+          <p className="text-xs font-medium text-tenue">
             Clientes integrales activos (meta {META_CLIENTES})
           </p>
           <p className="text-2xl font-semibold">
             {clientesIntegrales}{" "}
-            <span className="text-sm font-normal text-neutral-500">
+            <span className="text-sm font-normal text-tenue">
               / {META_CLIENTES}
             </span>
           </p>
@@ -399,10 +399,10 @@ export function SolopClient({
             "rounded-xl border p-4",
             conScopeCreep > 0
               ? "border-red-500/30 bg-red-500/5"
-              : "border-black/10 dark:border-white/10"
+              : "border-linea"
           )}
         >
-          <p className="text-xs font-medium text-neutral-500">
+          <p className="text-xs font-medium text-tenue">
             Proyectos con riesgo de scope creep
           </p>
           <p className="text-2xl font-semibold">{conScopeCreep}</p>
@@ -413,7 +413,7 @@ export function SolopClient({
         <select
           value={tipoFiltro}
           onChange={(e) => setTipoFiltro(e.target.value as typeof tipoFiltro)}
-          className="rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20 dark:bg-neutral-900"
+          className="rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm"
         >
           <option value="Todos">Todos los contratos</option>
           <option value="Fee">Fee</option>
@@ -422,7 +422,7 @@ export function SolopClient({
         <select
           value={estadoFiltro}
           onChange={(e) => setEstadoFiltro(e.target.value as typeof estadoFiltro)}
-          className="rounded-md border border-black/15 bg-transparent px-2 py-1.5 text-sm dark:border-white/20 dark:bg-neutral-900"
+          className="rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm"
         >
           <option value="Todos">Todos los estados</option>
           <option value="saludable">Saludable (&ge;{META_MARGEN}%)</option>
@@ -431,10 +431,10 @@ export function SolopClient({
         </select>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-black/10 dark:border-white/10">
+      <div className="overflow-x-auto rounded-xl border border-linea">
         <table className="w-full min-w-[720px] text-sm">
           <thead>
-            <tr className="border-b border-black/10 text-left text-xs uppercase tracking-wide text-neutral-500 dark:border-white/10">
+            <tr className="border-b border-linea text-left text-xs uppercase tracking-wide text-tenue">
               <th className="px-4 py-3">Cliente / Proyecto</th>
               <th className="px-4 py-3">Tipo</th>
               <th className="px-4 py-3">KR asociado</th>
@@ -447,7 +447,7 @@ export function SolopClient({
           <tbody>
             {visibles.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-neutral-500">
+                <td colSpan={7} className="px-4 py-6 text-center text-tenue">
                   No hay proyectos para este filtro.
                 </td>
               </tr>
@@ -469,7 +469,7 @@ export function SolopClient({
                       </p>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-neutral-500">
+                  <td className="px-4 py-3 text-tenue">
                     {p.tipo_contrato === "AdHoc" ? "Ad-Hoc" : "Fee"}
                   </td>
                   <td className="max-w-[200px] px-4 py-3">
@@ -482,7 +482,7 @@ export function SolopClient({
                         {kr.titulo}
                       </Link>
                     ) : (
-                      <span className="text-xs text-neutral-400">—</span>
+                      <span className="text-xs text-tenue">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -493,7 +493,7 @@ export function SolopClient({
                       className={clsx(
                         "font-semibold",
                         margen === null
-                          ? "text-neutral-400"
+                          ? "text-tenue"
                           : margen >= META_MARGEN
                             ? "text-emerald-600 dark:text-emerald-400"
                             : margen >= 50
@@ -511,7 +511,7 @@ export function SolopClient({
                     <button
                       type="button"
                       onClick={() => setModal({ abierto: true, proyecto: p })}
-                      className="rounded-md border border-black/15 px-2.5 py-1 text-xs font-medium dark:border-white/20"
+                      className="rounded-md border border-linea px-2.5 py-1 text-xs font-medium"
                     >
                       Sincronizar
                     </button>

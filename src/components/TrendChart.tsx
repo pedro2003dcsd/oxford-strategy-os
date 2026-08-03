@@ -22,7 +22,7 @@ export function TrendChart({
 }) {
   if (checkIns.length === 0) {
     return (
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-tenue">
         Todavía no hay check-ins para graficar la tendencia.
       </p>
     );

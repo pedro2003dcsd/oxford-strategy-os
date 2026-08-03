@@ -13,11 +13,11 @@ export default function LoginPage() {
     <main className="flex flex-1 items-center justify-center p-6">
       <form
         action={action}
-        className="w-full max-w-sm space-y-4 rounded-xl border border-black/10 p-8 dark:border-white/10"
+        className="w-full max-w-sm space-y-4 rounded-xl border border-linea p-8"
       >
         <div>
           <h1 className="text-xl font-semibold">Oxford Strategy OS</h1>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-tenue">
             Ingresá con tu cuenta de Grupo Oxford.
           </p>
         </div>
@@ -31,7 +31,7 @@ export default function LoginPage() {
             type="email"
             required
             autoComplete="email"
-            className="w-full rounded-md border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+            className="w-full rounded-md border border-linea bg-transparent px-3 py-2 text-sm"
           />
         </div>
         <div className="space-y-1">
@@ -44,14 +44,14 @@ export default function LoginPage() {
             type="password"
             required
             autoComplete="current-password"
-            className="w-full rounded-md border border-black/15 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+            className="w-full rounded-md border border-linea bg-transparent px-3 py-2 text-sm"
           />
         </div>
         {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+          className="w-full rounded-md bg-oxford px-3 py-2 text-sm font-medium text-white transition hover:bg-oxford-fuerte disabled:opacity-50"
         >
           {pending ? "Ingresando…" : "Ingresar"}
         </button>

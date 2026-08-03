@@ -9,34 +9,34 @@ export default function ProtectedLayout({
 }) {
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="border-b border-black/10 dark:border-white/10">
+      <header className="border-b border-linea">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
             <Link href="/" className="text-sm font-semibold">
               Oxford Strategy OS
             </Link>
-            <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-neutral-500">
-              <Link href="/" className="hover:text-neutral-900 dark:hover:text-white">
+            <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-tenue">
+              <Link href="/" className="hover:text-foreground">
                 Dashboard
               </Link>
-              <Link href="/checkin" className="hover:text-neutral-900 dark:hover:text-white">
+              <Link href="/checkin" className="hover:text-foreground">
                 Check-in
               </Link>
-              <Link href="/okrs" className="hover:text-neutral-900 dark:hover:text-white">
+              <Link href="/okrs" className="hover:text-foreground">
                 Alineación
               </Link>
-              <Link href="/lom" className="hover:text-neutral-900 dark:hover:text-white">
+              <Link href="/lom" className="hover:text-foreground">
                 LOM
               </Link>
-              <Link href="/solop" className="hover:text-neutral-900 dark:hover:text-white">
+              <Link href="/solop" className="hover:text-foreground">
                 SOLOP
               </Link>
-              <Link href="/informes" className="hover:text-neutral-900 dark:hover:text-white">
+              <Link href="/informes" className="hover:text-foreground">
                 Informes
               </Link>
               <Link
                 href="/scout"
-                className="flex items-center gap-1 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                className="flex items-center gap-1 text-oxford hover:text-oxford-fuerte"
               >
                 <span aria-hidden>✦</span> Scout AI
               </Link>

@@ -3,9 +3,13 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { AREAS, TRIMESTRES } from "@/lib/types";
-import type { KeyResultCompleto } from "@/lib/types";
+import type { CheckIn, KeyResultCompleto, ProyectoSolop } from "@/lib/types";
 import { hasAlertaRentabilidad } from "@/lib/kr-logic";
+import { tieneAlertaRentabilidad, advertenciaHoras } from "@/lib/solop-logic";
+import { responsablesDe } from "@/lib/personas";
+import { useResponsable } from "@/lib/use-responsable";
 import { KrCard } from "@/components/KrCard";
+import { KrDrawer } from "@/components/KrDrawer";
 import { EstrellaPolar } from "@/components/EstrellaPolar";
 
 const AREA_ORDER = [...AREAS, "Sin área asignada"];
@@ -20,7 +24,7 @@ function FilterTabs<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-1 rounded-lg bg-black/5 p-1 dark:bg-white/10">
+    <div className="flex flex-wrap gap-1 rounded-lg bg-linea/60 p-1">
       {options.map((opt) => (
         <button
           key={opt}
@@ -29,8 +33,8 @@ function FilterTabs<T extends string>({
           className={clsx(
             "rounded-md px-2.5 py-1 text-xs font-medium transition",
             value === opt
-              ? "bg-white text-neutral-900 shadow-sm dark:bg-neutral-900 dark:text-white"
-              : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              ? "bg-panel text-foreground shadow-sm"
+              : "text-tenue hover:text-foreground"
           )}
         >
           {opt}
@@ -67,33 +71,78 @@ function StatPill({
 const TRIM_OPTIONS = ["Todos", ...TRIMESTRES] as const;
 const AREA_OPTIONS = ["Todas", ...AREAS] as const;
 
-export function DashboardClient({ krs }: { krs: KeyResultCompleto[] }) {
-  const [modoLom, setModoLom] = useState(false);
+export function DashboardClient({
+  krs,
+  checkIns = [],
+  proyectos = [],
+}: {
+  krs: KeyResultCompleto[];
+  checkIns?: CheckIn[];
+  proyectos?: ProyectoSolop[];
+}) {
   const [trimestre, setTrimestre] = useState<(typeof TRIM_OPTIONS)[number]>("Todos");
   const [area, setArea] = useState<(typeof AREA_OPTIONS)[number]>("Todas");
+  const [soloAlertas, setSoloAlertas] = useState(false);
+  const [misObjetivos, setMisObjetivos] = useState(false);
+  const [yo, guardarResponsable] = useResponsable();
+  const [krAbierto, setKrAbierto] = useState<string | null>(null);
 
-  const filtrados = useMemo(
-    () =>
-      krs.filter((kr) => {
-        if (trimestre !== "Todos" && kr.okr_trimestral?.trimestre !== trimestre)
-          return false;
-        if (area !== "Todas" && kr.okr_trimestral?.area !== area) return false;
-        return true;
-      }),
-    [krs, trimestre, area]
-  );
+  const responsables = useMemo(() => responsablesDe(krs), [krs]);
 
-  const visibles = useMemo(
-    () =>
-      modoLom
-        ? filtrados.filter((kr) => kr.estado_semaforo !== "verde")
-        : filtrados,
-    [filtrados, modoLom]
-  );
+  function elegirResponsable(nombre: string) {
+    guardarResponsable(nombre);
+    if (!nombre) setMisObjetivos(false);
+  }
+
+  const proyectoPorKr = useMemo(() => {
+    const map = new Map<string, ProyectoSolop>();
+    for (const p of proyectos) if (p.kr_id) map.set(p.kr_id, p);
+    return map;
+  }, [proyectos]);
+
+  const bloqueoPorKr = useMemo(() => {
+    const map = new Map<string, CheckIn>();
+    // checkIns viene ordenado ascendente: el último con comentario gana.
+    for (const c of checkIns) {
+      if (c.comentario_bloqueos) map.set(c.kr_id, c);
+    }
+    return map;
+  }, [checkIns]);
+
+  const checkInsPorKr = useMemo(() => {
+    const map = new Map<string, CheckIn[]>();
+    for (const c of checkIns) {
+      if (!map.has(c.kr_id)) map.set(c.kr_id, []);
+      map.get(c.kr_id)!.push(c);
+    }
+    return map;
+  }, [checkIns]);
+
+  const visibles = useMemo(() => {
+    /** Un KR está "en alerta" si su semáforo no está en verde, si tiene alerta
+     * de rentabilidad, o si su proyecto en SOLOP se come las horas. */
+    function enAlerta(kr: KeyResultCompleto): boolean {
+      if (kr.estado_semaforo !== "verde") return true;
+      if (hasAlertaRentabilidad(kr)) return true;
+      const p = proyectoPorKr.get(kr.id);
+      return Boolean(p && (tieneAlertaRentabilidad(p) || advertenciaHoras(p)));
+    }
+
+    const base = krs.filter((kr) => {
+      if (trimestre !== "Todos" && kr.okr_trimestral?.trimestre !== trimestre)
+        return false;
+      if (area !== "Todas" && kr.okr_trimestral?.area !== area) return false;
+      if (misObjetivos && yo && kr.okr_trimestral?.responsable !== yo)
+        return false;
+      return true;
+    });
+
+    return { filtrados: base, visibles: soloAlertas ? base.filter(enAlerta) : base };
+  }, [krs, trimestre, area, misObjetivos, yo, soloAlertas, proyectoPorKr]);
 
   const counts = useMemo(
     () =>
-      filtrados.reduce(
+      visibles.filtrados.reduce(
         (acc, kr) => {
           acc[kr.estado_semaforo]++;
           if (hasAlertaRentabilidad(kr)) acc.alertaRentabilidad++;
@@ -101,20 +150,22 @@ export function DashboardClient({ krs }: { krs: KeyResultCompleto[] }) {
         },
         { verde: 0, amarillo: 0, rojo: 0, alertaRentabilidad: 0 }
       ),
-    [filtrados]
+    [visibles]
   );
 
   const grupos = useMemo(() => {
     const porArea = new Map<string, KeyResultCompleto[]>();
-    for (const kr of visibles) {
-      const area = kr.okr_trimestral?.area ?? "Sin área asignada";
-      if (!porArea.has(area)) porArea.set(area, []);
-      porArea.get(area)!.push(kr);
+    for (const kr of visibles.visibles) {
+      const a = kr.okr_trimestral?.area ?? "Sin área asignada";
+      if (!porArea.has(a)) porArea.set(a, []);
+      porArea.get(a)!.push(kr);
     }
     return [...porArea.entries()].sort(
       (a, b) => AREA_ORDER.indexOf(a[0]) - AREA_ORDER.indexOf(b[0])
     );
   }, [visibles]);
+
+  const seleccionado = krs.find((k) => k.id === krAbierto) ?? null;
 
   return (
     <div className="space-y-8">
@@ -125,51 +176,99 @@ export function DashboardClient({ krs }: { krs: KeyResultCompleto[] }) {
           <FilterTabs options={TRIM_OPTIONS} value={trimestre} onChange={setTrimestre} />
           <FilterTabs options={AREA_OPTIONS} value={area} onChange={setArea} />
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap gap-3">
-            <StatPill label="Verde" value={counts.verde} tone="emerald" />
-            <StatPill label="Amarillo" value={counts.amarillo} tone="amber" />
-            <StatPill label="Rojo" value={counts.rojo} tone="red" />
-            {counts.alertaRentabilidad > 0 && (
-              <StatPill
-                label="Alerta rentabilidad"
-                value={counts.alertaRentabilidad}
-                tone="red"
-              />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMisObjetivos((v) => !v)}
+            disabled={!yo}
+            title={yo ? undefined : "Elegí quién sos para usar este filtro"}
+            className={clsx(
+              "rounded-full border px-3 py-1.5 text-xs font-medium transition disabled:opacity-40",
+              misObjetivos
+                ? "border-oxford bg-oxford text-white"
+                : "border-linea text-tenue hover:border-oxford/50 hover:text-foreground"
             )}
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={modoLom}
-              onChange={(e) => setModoLom(e.target.checked)}
-              className="h-4 w-4 rounded border-black/20 dark:border-white/30"
+          >
+            👤 Mis Objetivos
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSoloAlertas((v) => !v)}
+            className={clsx(
+              "rounded-full border px-3 py-1.5 text-xs font-medium transition",
+              soloAlertas
+                ? "border-oxford bg-oxford text-white"
+                : "border-linea text-tenue hover:border-oxford/50 hover:text-foreground"
+            )}
+          >
+            ⚠️ Solo Alertas
+          </button>
+
+          <select
+            value={yo}
+            onChange={(e) => elegirResponsable(e.target.value)}
+            aria-label="Quién sos"
+            className="rounded-full border border-linea bg-transparent px-3 py-1.5 text-xs text-tenue"
+          >
+            <option value="">Soy…</option>
+            {responsables.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <StatPill label="Verde" value={counts.verde} tone="emerald" />
+          <StatPill label="Amarillo" value={counts.amarillo} tone="amber" />
+          <StatPill label="Rojo" value={counts.rojo} tone="red" />
+          {counts.alertaRentabilidad > 0 && (
+            <StatPill
+              label="Alerta rentabilidad"
+              value={counts.alertaRentabilidad}
+              tone="red"
             />
-            <span className="font-medium">Modo LOM — solo amarillo/rojo</span>
-          </label>
+          )}
         </div>
       </div>
 
       {grupos.length === 0 && (
-        <p className="text-sm text-neutral-500">
-          {modoLom
-            ? "Nada en riesgo o retrasado. Todo verde."
+        <p className="text-sm text-tenue">
+          {soloAlertas
+            ? "Nada en alerta para este filtro. Todo en verde."
             : "No hay Key Results para este filtro."}
         </p>
       )}
 
-      {grupos.map(([area, items]) => (
-        <section key={area} className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-            {area}
+      {grupos.map(([nombreArea, items]) => (
+        <section key={nombreArea} className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-tenue">
+            {nombreArea}
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((kr) => (
-              <KrCard key={kr.id} kr={kr} />
+              <KrCard
+                key={kr.id}
+                kr={kr}
+                ultimoBloqueo={bloqueoPorKr.get(kr.id)}
+                onSelect={(k) => setKrAbierto(k.id)}
+              />
             ))}
           </div>
         </section>
       ))}
+
+      {seleccionado && (
+        <KrDrawer
+          kr={seleccionado}
+          checkIns={checkInsPorKr.get(seleccionado.id) ?? []}
+          proyecto={proyectoPorKr.get(seleccionado.id) ?? null}
+          onClose={() => setKrAbierto(null)}
+        />
+      )}
     </div>
   );
 }

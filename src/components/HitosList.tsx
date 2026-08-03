@@ -22,9 +22,9 @@ export function HitosList({ krId, hitos }: { krId: string; hitos: HitoKr[] }) {
                 toggleHito(hito.id, krId, e.target.checked);
               })
             }
-            className="h-4 w-4 rounded border-black/20 dark:border-white/30"
+            className="h-4 w-4 rounded border-linea-fuerte"
           />
-          <span className={clsx(hito.cumplido && "text-neutral-400 line-through")}>
+          <span className={clsx(hito.cumplido && "text-tenue line-through")}>
             {hito.titulo}
           </span>
         </li>
