@@ -40,6 +40,9 @@ export default function ProtectedLayout({
               >
                 <span aria-hidden>✦</span> Scout AI
               </Link>
+              <Link href="/equipo" className="hover:text-foreground">
+                Equipo
+              </Link>
             </nav>
           </div>
           <SignOutButton />

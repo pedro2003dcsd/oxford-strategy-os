@@ -75,19 +75,27 @@ export function DashboardClient({
   krs,
   checkIns = [],
   proyectos = [],
+  responsableDelPerfil = null,
 }: {
   krs: KeyResultCompleto[];
   checkIns?: CheckIn[];
   proyectos?: ProyectoSolop[];
+  /** Viene de la cuenta con la que se entró. Si está, manda sobre el
+   * selector manual: nadie tiene que decir quién es si ya se logueó. */
+  responsableDelPerfil?: string | null;
 }) {
   const [trimestre, setTrimestre] = useState<(typeof TRIM_OPTIONS)[number]>("Todos");
   const [area, setArea] = useState<(typeof AREA_OPTIONS)[number]>("Todas");
   const [soloAlertas, setSoloAlertas] = useState(false);
   const [misObjetivos, setMisObjetivos] = useState(false);
-  const [yo, guardarResponsable] = useResponsable();
+  const [elegido, guardarResponsable] = useResponsable();
   const [krAbierto, setKrAbierto] = useState<string | null>(null);
 
   const responsables = useMemo(() => responsablesDe(krs), [krs]);
+
+  // El perfil de la cuenta gana sobre la elección manual del navegador.
+  const yo = responsableDelPerfil ?? elegido;
+  const perfilFijo = Boolean(responsableDelPerfil);
 
   function elegirResponsable(nombre: string) {
     guardarResponsable(nombre);
@@ -206,19 +214,25 @@ export function DashboardClient({
             ⚠️ Solo Alertas
           </button>
 
-          <select
-            value={yo}
-            onChange={(e) => elegirResponsable(e.target.value)}
-            aria-label="Quién sos"
-            className="rounded-full border border-linea bg-transparent px-3 py-1.5 text-xs text-tenue"
-          >
-            <option value="">Soy…</option>
-            {responsables.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
+          {perfilFijo ? (
+            <span className="rounded-full border border-linea px-3 py-1.5 text-xs text-tenue">
+              Sos {yo}
+            </span>
+          ) : (
+            <select
+              value={yo}
+              onChange={(e) => elegirResponsable(e.target.value)}
+              aria-label="Quién sos"
+              className="rounded-full border border-linea bg-transparent px-3 py-1.5 text-xs text-tenue"
+            >
+              <option value="">Soy…</option>
+              {responsables.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-3">

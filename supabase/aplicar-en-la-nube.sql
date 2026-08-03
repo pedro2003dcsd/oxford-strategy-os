@@ -4,8 +4,8 @@
 -- Pegar TODO esto en el SQL editor de Supabase y apretar Run:
 -- https://supabase.com/dashboard/project/yxfjimahoxeaebrovkwp/sql/new
 --
--- Contiene las migraciones 0004, 0005 y 0006. Es idempotente: se puede
--- correr más de una vez sin romper nada, y no toca datos.
+-- Contiene las migraciones 0004 a 0007. Es idempotente: se puede correr más
+-- de una vez sin romper nada, y no toca los datos existentes.
 --
 -- DESPUÉS, si querés recargar los datos de demo, pegá por separado el
 -- contenido de `supabase/seed.sql` (ese sí borra y recarga el árbol
@@ -108,3 +108,62 @@ where cumplido = true
   and margen_actual_pct < margen_utilidad_esperado;
 
 grant select on v_key_results_estado, v_alertas_rentabilidad to authenticated;
+
+-- ------------------------------------------------------------
+-- 0007 — Lista de autorizados y perfiles
+-- ------------------------------------------------------------
+-- ⚠ CORRER ESTO ANTES de que salga el deploy con login de Google. Con el
+-- login habilitado, cualquiera con Gmail puede intentar entrar: esta lista
+-- es la única puerta.
+create table if not exists usuarios_autorizados (
+  id uuid primary key default gen_random_uuid(),
+  email varchar not null,
+  nombre varchar not null,
+  responsable varchar,
+  rol varchar not null default 'lider' check (rol in ('direccion', 'lider', 'lectura')),
+  activo boolean not null default true,
+  creado_at timestamptz not null default now()
+);
+
+create unique index if not exists idx_usuarios_autorizados_email
+  on usuarios_autorizados (lower(email));
+
+-- Semilla: sin esto queda el candado cerrado con la llave adentro.
+-- ⚠ Si tu cuenta de producción usa otro mail, cambiálo acá ANTES de correr.
+insert into usuarios_autorizados (email, nombre, responsable, rol)
+values ('pedrogrupooxford@gmail.com', 'Pedro', 'Mateo', 'direccion')
+on conflict do nothing;
+
+-- SECURITY DEFINER a propósito: si leyeran la tabla con RLS puesta, la
+-- política que las usa se llamaría a sí misma y entraría en recursión.
+create or replace function esta_autorizado()
+returns boolean language sql security definer stable set search_path = public as $$
+  select exists (
+    select 1 from usuarios_autorizados
+    where lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')) and activo
+  );
+$$;
+
+create or replace function es_direccion()
+returns boolean language sql security definer stable set search_path = public as $$
+  select exists (
+    select 1 from usuarios_autorizados
+    where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+      and rol = 'direccion' and activo
+  );
+$$;
+
+grant execute on function esta_autorizado() to authenticated;
+grant execute on function es_direccion() to authenticated;
+
+alter table usuarios_autorizados enable row level security;
+
+drop policy if exists "lectura autenticada" on usuarios_autorizados;
+create policy "lectura autenticada" on usuarios_autorizados
+  for select using (auth.role() = 'authenticated');
+
+drop policy if exists "solo direccion administra" on usuarios_autorizados;
+create policy "solo direccion administra" on usuarios_autorizados
+  for all using (es_direccion()) with check (es_direccion());
+
+grant select, insert, update, delete on usuarios_autorizados to authenticated;

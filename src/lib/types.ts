@@ -25,6 +25,27 @@ export type TipoMedicion = (typeof TIPOS_MEDICION)[number];
 export const SEMAFOROS = ["verde", "amarillo", "rojo"] as const;
 export type Semaforo = (typeof SEMAFOROS)[number];
 
+export const ROLES = ["direccion", "lider", "lectura"] as const;
+export type Rol = (typeof ROLES)[number];
+
+export const ROL_LABELS: Record<Rol, string> = {
+  direccion: "Dirección",
+  lider: "Líder de área",
+  lectura: "Solo lectura",
+};
+
+/** Lista blanca de acceso y perfil de la persona en una sola fila. */
+export interface UsuarioAutorizado {
+  id: string;
+  email: string;
+  nombre: string;
+  /** Nombre tal cual figura en okr_trimestral.responsable. */
+  responsable: string | null;
+  rol: Rol;
+  activo: boolean;
+  creado_at: string;
+}
+
 export interface Pilar {
   id: string;
   nombre: string;
