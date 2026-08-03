@@ -12,20 +12,88 @@ import {
 import { SemaforoBadge } from "@/components/SemaforoBadge";
 import { RentabilityBadge } from "@/components/RentabilityBadge";
 import { Sparkline } from "@/components/Sparkline";
-import { formatValor, hasAlertaRentabilidad } from "@/lib/kr-logic";
+import { Avatar } from "@/components/Avatar";
+import { formatValor, hasAlertaRentabilidad, progresoPct } from "@/lib/kr-logic";
 import { generarResumenLom, generarResumenChat } from "@/lib/resumen-lom";
+import {
+  areaPorResponsable,
+  compromisosDeLaLomPasada,
+  compromisoVencido,
+  dependenciaCruzada,
+} from "@/lib/lom";
+import { responsablesDe } from "@/lib/personas";
 import { AREAS, TRIMESTRES } from "@/lib/types";
 import type { CheckIn, CompromisoLom, KeyResultCompleto } from "@/lib/types";
 
 const TRIM_OPTIONS = ["Todos", ...TRIMESTRES] as const;
 const AREA_OPTIONS = ["Todas", ...AREAS] as const;
 
+const DIAS_CUATRO_SEMANAS = 28;
+
+/** Los check-ins de las últimas 4 semanas. Si en ese lapso hubo menos de dos,
+ * caemos a los últimos 6 para que la línea no quede vacía. */
+function ultimasCuatroSemanas(historial: CheckIn[]): CheckIn[] {
+  const corte = Date.now() - DIAS_CUATRO_SEMANAS * 86400000;
+  const recientes = historial.filter(
+    (c) => new Date(c.creado_at).getTime() >= corte
+  );
+  return recientes.length >= 2 ? recientes : historial.slice(-6);
+}
+
+function ItemCompromiso({
+  compromiso,
+  onToggle,
+  deshabilitado,
+}: {
+  compromiso: CompromisoLom;
+  onToggle: (cumplido: boolean) => void;
+  deshabilitado: boolean;
+}) {
+  const vencido = compromisoVencido(compromiso);
+  return (
+    <li className="flex items-start gap-2 text-xs">
+      <input
+        type="checkbox"
+        checked={compromiso.cumplido}
+        disabled={deshabilitado}
+        onChange={(e) => onToggle(e.target.checked)}
+        aria-label={`Marcar cumplido: ${compromiso.descripcion}`}
+        className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-linea-fuerte accent-[var(--oxford)]"
+      />
+      <span className="min-w-0 flex-1">
+        <span className={clsx("block", compromiso.cumplido && "text-tenue line-through")}>
+          {compromiso.descripcion}
+        </span>
+        <span className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          {compromiso.responsable && <Avatar nombre={compromiso.responsable} />}
+          {compromiso.fecha_limite && (
+            <span
+              className={clsx(
+                "text-[11px]",
+                vencido ? "font-medium text-red-700 dark:text-red-400" : "text-tenue"
+              )}
+            >
+              {vencido ? "⚠ Venció " : "Vence "}
+              {new Date(compromiso.fecha_limite).toLocaleDateString("es-AR", {
+                day: "2-digit",
+                month: "short",
+              })}
+            </span>
+          )}
+        </span>
+      </span>
+    </li>
+  );
+}
+
 function CompromisosLom({
   kr,
   compromisos,
+  responsables,
 }: {
   kr: KeyResultCompleto;
   compromisos: CompromisoLom[];
+  responsables: string[];
 }) {
   const [isPending, startTransition] = useTransition();
   const boundAction = addCompromisoLom.bind(null, kr.id);
@@ -40,42 +108,111 @@ function CompromisosLom({
       {compromisos.length === 0 && (
         <p className="text-xs text-tenue">Sin compromisos anotados.</p>
       )}
-      <ul className="space-y-1">
+      <ul className="space-y-1.5">
         {compromisos.map((c) => (
-          <li key={c.id} className="flex items-start gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={c.cumplido}
-              disabled={isPending}
-              onChange={(e) =>
-                startTransition(() => {
-                  toggleCompromisoLom(c.id, e.target.checked);
-                })
-              }
-              className="mt-0.5 h-3.5 w-3.5 rounded border-linea-fuerte"
-            />
-            <span className={clsx(c.cumplido && "text-tenue line-through")}>
-              {c.descripcion}
-            </span>
-          </li>
+          <ItemCompromiso
+            key={c.id}
+            compromiso={c}
+            deshabilitado={isPending}
+            onToggle={(cumplido) =>
+              startTransition(() => {
+                toggleCompromisoLom(c.id, cumplido);
+              })
+            }
+          />
         ))}
       </ul>
-      <form action={formAction} className="flex gap-1.5">
+      <form action={formAction} className="space-y-1.5">
         <input
           name="descripcion"
-          placeholder='Ej: "Mateo revisa presupuesto con Dolores"'
+          placeholder='Ej: "Revisar presupuesto con Dolores"'
           className="w-full rounded-md border border-linea bg-transparent px-2 py-1 text-xs"
         />
-        <button
-          type="submit"
-          disabled={adding}
-          className="shrink-0 rounded-md border border-linea px-2 py-1 text-xs font-medium disabled:opacity-50"
-        >
-          {adding ? "…" : "Anotar"}
-        </button>
+        <div className="flex gap-1.5">
+          <select
+            name="responsable"
+            defaultValue={kr.okr_trimestral?.responsable ?? ""}
+            aria-label="Responsable del compromiso"
+            className="min-w-0 flex-1 rounded-md border border-linea bg-transparent px-2 py-1 text-xs"
+          >
+            <option value="">Responsable…</option>
+            {responsables.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+          <input
+            name="fecha_limite"
+            type="date"
+            aria-label="Fecha límite del compromiso"
+            className="rounded-md border border-linea bg-transparent px-2 py-1 text-xs"
+          />
+          <button
+            type="submit"
+            disabled={adding}
+            className="shrink-0 rounded-md border border-linea px-2 py-1 text-xs font-medium transition hover:border-oxford/50 disabled:opacity-50"
+          >
+            {adding ? "…" : "Anotar"}
+          </button>
+        </div>
       </form>
-      {state?.error && <p className="text-xs text-red-600">{state.error}</p>}
+      {state?.error && (
+        <p className="text-xs text-red-700 dark:text-red-400">{state.error}</p>
+      )}
     </div>
+  );
+}
+
+/** Revisión de la reunión anterior: lo primero que hace la LOM es preguntar
+ * qué pasó con lo que se acordó la semana pasada. */
+function RevisionLomPasada({
+  compromisos,
+  krs,
+}: {
+  compromisos: CompromisoLom[];
+  krs: KeyResultCompleto[];
+}) {
+  const [isPending, startTransition] = useTransition();
+  const pasados = useMemo(() => compromisosDeLaLomPasada(compromisos), [compromisos]);
+
+  if (pasados.length === 0) return null;
+
+  const cumplidos = pasados.filter((c) => c.cumplido).length;
+
+  return (
+    <details
+      open
+      className="rounded-xl border border-linea bg-panel p-4"
+    >
+      <summary className="cursor-pointer text-sm font-semibold">
+        Compromisos de la LOM pasada{" "}
+        <span className="font-normal text-tenue">
+          · {cumplidos} de {pasados.length} cumplidos
+        </span>
+      </summary>
+      <ul className="mt-3 space-y-2">
+        {pasados.map((c) => {
+          const kr = krs.find((k) => k.id === c.kr_id);
+          return (
+            <li key={c.id}>
+              <ItemCompromiso
+                compromiso={c}
+                deshabilitado={isPending}
+                onToggle={(cumplido) =>
+                  startTransition(() => {
+                    toggleCompromisoLom(c.id, cumplido);
+                  })
+                }
+              />
+              {kr && (
+                <p className="pl-6 text-[11px] text-tenue">sobre: {kr.titulo}</p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </details>
   );
 }
 
@@ -107,7 +244,7 @@ function ResumenModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-linea/600 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -173,6 +310,9 @@ export function LomClient({
     }
     return map;
   }, [checkIns]);
+
+  const responsables = useMemo(() => responsablesDe(krs), [krs]);
+  const areasPorResponsable = useMemo(() => areaPorResponsable(krs), [krs]);
 
   const compPorKr = useMemo(() => {
     const map = new Map<string, CompromisoLom[]>();
@@ -320,6 +460,8 @@ export function LomClient({
         </label>
       </div>
 
+      <RevisionLomPasada compromisos={compromisos} krs={krs} />
+
       {visibles.length === 0 && (
         <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-700 dark:text-emerald-400">
           🎉 Sin desvíos para este filtro: nada que escalar a la LOM.
@@ -333,6 +475,11 @@ export function LomClient({
             .reverse()
             .find((c) => c.comentario_bloqueos);
           const alerta = hasAlertaRentabilidad(kr);
+          const dependencia = dependenciaCruzada(
+            kr,
+            ultimoConComentario ?? null,
+            areasPorResponsable
+          );
 
           return (
             <div
@@ -371,16 +518,29 @@ export function LomClient({
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1">
                   <Sparkline
-                    checkIns={historial.slice(-6)}
+                    checkIns={ultimasCuatroSemanas(historial)}
                     valorMeta={kr.tipo_medicion === "hitos" ? 100 : kr.valor_meta}
                   />
+                  <p className="pt-0.5 text-[11px] text-tenue">Últimas 4 semanas</p>
                 </div>
-                <p className="shrink-0 text-xs text-tenue">
-                  {kr.tipo_medicion === "hitos"
-                    ? `${kr.hitos_kr.filter((h) => h.cumplido).length}/${kr.hitos_kr.length} hitos`
-                    : `${formatValor(kr.valor_actual, kr.tipo_medicion)} / ${formatValor(kr.valor_meta, kr.tipo_medicion)}`}
-                </p>
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-semibold">{progresoPct(kr)}%</p>
+                  <p className="text-xs text-tenue">
+                    {kr.tipo_medicion === "hitos"
+                      ? `${kr.hitos_kr.filter((h) => h.cumplido).length}/${kr.hitos_kr.length} hitos`
+                      : `${formatValor(kr.valor_actual, kr.tipo_medicion)} / ${formatValor(kr.valor_meta, kr.tipo_medicion)}`}
+                  </p>
+                </div>
               </div>
+
+              {dependencia && (
+                <p className="rounded-md bg-oxford-suave px-2 py-1 text-xs font-medium text-oxford">
+                  🔗 Caído por bloqueo en: {dependencia.area}
+                  <span className="block font-normal text-tenue">
+                    {dependencia.detalle}
+                  </span>
+                </p>
+              )}
 
               {alerta && (
                 <p className="rounded-md bg-red-500/10 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400">
@@ -396,7 +556,11 @@ export function LomClient({
                 </blockquote>
               )}
 
-              <CompromisosLom kr={kr} compromisos={compPorKr.get(kr.id) ?? []} />
+              <CompromisosLom
+                kr={kr}
+                compromisos={compPorKr.get(kr.id) ?? []}
+                responsables={responsables}
+              />
             </div>
           );
         })}

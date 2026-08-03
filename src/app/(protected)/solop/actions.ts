@@ -10,6 +10,41 @@ function num(formData: FormData, key: string): number {
   return Number.isNaN(v) ? 0 : v;
 }
 
+/** Asocia (o desasocia) un KR desde la fila de la tabla, sin abrir el modal.
+ * Si queda asociado y hay facturación cargada, arrastra el margen al KR. */
+export async function asignarKrAProyecto(proyectoId: string, krId: string | null) {
+  const supabase = await createClient();
+
+  const { data: proyecto } = await supabase
+    .from("proyectos_solop")
+    .select("facturacion_total, costo_operativo")
+    .eq("id", proyectoId)
+    .maybeSingle();
+
+  await supabase
+    .from("proyectos_solop")
+    .update({ kr_id: krId, actualizado_at: new Date().toISOString() })
+    .eq("id", proyectoId);
+
+  const facturacion = Number(proyecto?.facturacion_total ?? 0);
+  const costo = Number(proyecto?.costo_operativo ?? 0);
+  if (krId && facturacion > 0) {
+    const margen = Math.round(((facturacion - costo) / facturacion) * 1000) / 10;
+    await supabase
+      .from("key_results")
+      .update({
+        margen_actual_pct: margen,
+        margen_actualizado_at: new Date().toISOString(),
+      })
+      .eq("id", krId);
+  }
+
+  revalidatePath("/solop");
+  revalidatePath("/");
+  revalidatePath("/lom");
+  if (krId) revalidatePath(`/kr/${krId}`);
+}
+
 /** Crea o edita un proyecto SOLOP y, si está vinculado a un KR, sincroniza el
  * margen real del proyecto en key_results.margen_actual_pct (lo que dispara
  * la alerta de rentabilidad y alimenta la Estrella Polar). */

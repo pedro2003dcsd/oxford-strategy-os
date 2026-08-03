@@ -20,6 +20,15 @@ export const TIPO_REPORTE_LABELS: Record<TipoReporte, string> = {
   area: "Reporte de Área",
 };
 
+export const SECCIONES_INFORME = ["desvios", "solop", "compromisos"] as const;
+export type SeccionInforme = (typeof SECCIONES_INFORME)[number];
+
+export const SECCION_LABELS: Record<SeccionInforme, string> = {
+  desvios: "Desvíos",
+  solop: "SOLOP / Margen",
+  compromisos: "Compromisos",
+};
+
 export interface DatosInforme {
   krs: KeyResultCompleto[];
   checkIns: CheckIn[];
@@ -29,6 +38,25 @@ export interface DatosInforme {
   area?: string;
   trimestre: string;
   anio: number;
+  /** Secciones pedidas. Si falta, van todas. */
+  secciones?: SeccionInforme[];
+}
+
+export function incluye(d: DatosInforme, seccion: SeccionInforme): boolean {
+  return !d.secciones || d.secciones.includes(seccion);
+}
+
+export interface InformeGuardado {
+  id: string;
+  tipo_reporte: string;
+  titulo: string;
+  markdown: string;
+  fuente: "ia" | "reglas";
+  area: string | null;
+  trimestre: string | null;
+  anio: number | null;
+  creado_por: string | null;
+  creado_at: string;
 }
 
 /** Resumen compacto de los datos, en texto plano. Se usa como contexto para
@@ -86,15 +114,17 @@ export function resumirDatos(d: DatosInforme): string {
     } else {
       lineas.push(`  - Sin check-ins registrados`);
     }
-    const comps = d.compromisos.filter((c) => c.kr_id === kr.id);
-    for (const c of comps) {
-      lineas.push(
-        `  - Compromiso LOM ${c.cumplido ? "(cumplido)" : "(pendiente)"}: ${c.descripcion}`
-      );
+    if (incluye(d, "compromisos")) {
+      const comps = d.compromisos.filter((c) => c.kr_id === kr.id);
+      for (const c of comps) {
+        lineas.push(
+          `  - Compromiso LOM ${c.cumplido ? "(cumplido)" : "(pendiente)"}: ${c.descripcion}${c.responsable ? ` — ${c.responsable}` : ""}`
+        );
+      }
     }
   }
 
-  if (d.proyectos.length > 0) {
+  if (d.proyectos.length > 0 && incluye(d, "solop")) {
     lineas.push("");
     lineas.push("## Rentabilidad por proyecto (SOLOP)");
     for (const p of d.proyectos) {
@@ -154,8 +184,15 @@ ${INSTRUCCIONES[tipo]}`;
 
 export function userPrompt(d: DatosInforme): string {
   const hoy = new Date().toLocaleDateString("es-AR");
-  return `Fecha de hoy: ${hoy}
+  const pedido =
+    d.secciones && d.secciones.length < SECCIONES_INFORME.length
+      ? `\nIMPORTANTE: incluí únicamente estas secciones: ${d.secciones
+          .map((s) => SECCION_LABELS[s])
+          .join(", ")}. Omití las demás por completo.\n`
+      : "";
 
+  return `Fecha de hoy: ${hoy}
+${pedido}
 Datos actuales de Oxford Strategy OS:
 
 ${resumirDatos(d)}`;

@@ -1,12 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useActionState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
-import { upsertProyectoSolop, type SolopState } from "@/app/(protected)/solop/actions";
+import {
+  asignarKrAProyecto,
+  upsertProyectoSolop,
+  type SolopState,
+} from "@/app/(protected)/solop/actions";
 import {
   advertenciaHoras,
+  brechaHorasVsAvance,
+  BRECHA_SCOPE_CREEP,
   costoPorHora,
   ESTADO_FINANCIERO_LABELS,
   estadoFinanciero,
@@ -14,10 +20,12 @@ import {
   margenReal,
   META_MARGEN,
   ratioHoras,
+  tieneRiesgoScopeCreep,
   UMBRAL_ALERTA_HORAS,
   UMBRAL_SCOPE_CREEP,
   type EstadoFinanciero,
 } from "@/lib/solop-logic";
+import { progresoPct } from "@/lib/kr-logic";
 import { TIPOS_CONTRATO } from "@/lib/types";
 import type { KeyResult, ProyectoSolop } from "@/lib/types";
 
@@ -26,6 +34,24 @@ const META_CLIENTES = 20;
 const inputClass =
   "w-full rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm";
 const labelClass = "text-xs font-medium text-tenue";
+
+/** "Hoy 10:15 hs" si es de hoy, si no la fecha. Saber cuándo se cargó por
+ * última vez es la diferencia entre confiar en el número y no. */
+function formatoSync(iso: string): string {
+  const fecha = new Date(iso);
+  const hora = fecha.toLocaleTimeString("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const hoy = new Date();
+  const mismoDia = fecha.toDateString() === hoy.toDateString();
+  if (mismoDia) return `Hoy ${hora} hs`;
+
+  const ayer = new Date(hoy.getTime() - 86400000);
+  if (fecha.toDateString() === ayer.toDateString()) return `Ayer ${hora} hs`;
+
+  return `${fecha.toLocaleDateString("es-AR", { day: "2-digit", month: "short" })} ${hora} hs`;
+}
 
 const fmtPesos = (n: number) =>
   new Intl.NumberFormat("es-AR", {
@@ -51,31 +77,97 @@ function EstadoBadge({ estado }: { estado: EstadoFinanciero | null }) {
   );
 }
 
-function HorasBar({ proyecto }: { proyecto: ProyectoSolop }) {
+/** Dos barras apiladas: cuánto se consumió de horas y cuánto avanzó el
+ * objetivo. Si las horas le sacan mucha ventaja al resultado, se está
+ * trabajando de más para el mismo entregable. */
+function HorasBar({
+  proyecto,
+  avanceKr,
+}: {
+  proyecto: ProyectoSolop;
+  avanceKr: number | null;
+}) {
   const ratio = ratioHoras(proyecto);
   if (ratio === null)
     return <span className="text-xs text-tenue">Sin presupuesto</span>;
 
   const pct = Math.min(100, Math.round(ratio * 100));
+  const brecha = brechaHorasVsAvance(proyecto, avanceKr);
+  const scopeCreep = brecha !== null && brecha > BRECHA_SCOPE_CREEP;
+
   return (
-    <div className="space-y-1">
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-linea">
-        <div
-          className={clsx(
-            "h-full rounded-full transition-all",
-            ratio >= UMBRAL_SCOPE_CREEP
-              ? "bg-red-500"
-              : ratio >= UMBRAL_ALERTA_HORAS
-                ? "bg-amber-500"
-                : "bg-emerald-500"
-          )}
-          style={{ width: `${pct}%` }}
-        />
+    <div className="space-y-1.5">
+      <div className="space-y-0.5">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-linea">
+          <div
+            className={clsx(
+              "h-full rounded-full transition-all",
+              ratio >= UMBRAL_SCOPE_CREEP
+                ? "bg-red-500"
+                : ratio >= UMBRAL_ALERTA_HORAS
+                  ? "bg-amber-500"
+                  : "bg-emerald-500"
+            )}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <p className="text-xs text-tenue">
+          {proyecto.horas_consumidas} / {proyecto.horas_presupuestadas} hs ({pct}
+          %) horas
+        </p>
       </div>
-      <p className="text-xs text-tenue">
-        {proyecto.horas_consumidas} / {proyecto.horas_presupuestadas} hs ({pct}%)
-      </p>
+
+      {avanceKr !== null && (
+        <div className="space-y-0.5">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-linea">
+            <div
+              className="h-full rounded-full bg-oxford transition-all"
+              style={{ width: `${Math.min(100, avanceKr)}%` }}
+            />
+          </div>
+          <p className="text-xs text-tenue">{avanceKr}% avance del KR</p>
+        </div>
+      )}
+
+      {scopeCreep && (
+        <p className="rounded-md bg-red-500/10 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400">
+          🔴 Scope Creep Detectado · {brecha} puntos más de horas que de avance
+        </p>
+      )}
     </div>
+  );
+}
+
+/** Asignación de KR desde la propia fila, para los proyectos que llegan sin
+ * vincular. Sin esto hay que abrir el modal de sincronización solo para eso. */
+function SelectorKr({
+  proyecto,
+  krs,
+}: {
+  proyecto: ProyectoSolop;
+  krs: KeyResult[];
+}) {
+  const [pendiente, startTransition] = useTransition();
+
+  return (
+    <select
+      value={proyecto.kr_id ?? ""}
+      disabled={pendiente}
+      onChange={(e) =>
+        startTransition(() => {
+          asignarKrAProyecto(proyecto.id, e.target.value || null);
+        })
+      }
+      aria-label={`Asociar un KR a ${proyecto.cliente}`}
+      className="w-full max-w-[190px] rounded-md border border-dashed border-linea-fuerte bg-transparent px-2 py-1 text-xs text-tenue transition hover:border-oxford/50 disabled:opacity-50"
+    >
+      <option value="">🔗 Asociar KR…</option>
+      {krs.map((kr) => (
+        <option key={kr.id} value={kr.id}>
+          {kr.titulo}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -124,7 +216,7 @@ function ProyectoModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-linea/600 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -335,9 +427,7 @@ export function SolopClient({
       .filter((p) => (margenReal(p) ?? 0) >= META_MARGEN)
       .map((p) => p.cliente)
   ).size;
-  const conScopeCreep = proyectos.filter(
-    (p) => (ratioHoras(p) ?? 0) >= UMBRAL_SCOPE_CREEP
-  ).length;
+  const conScopeCreep = proyectos.filter(tieneRiesgoScopeCreep).length;
 
   const visibles = proyectos.filter((p) => {
     if (tipoFiltro !== "Todos" && p.tipo_contrato !== tipoFiltro) return false;
@@ -482,11 +572,14 @@ export function SolopClient({
                         {kr.titulo}
                       </Link>
                     ) : (
-                      <span className="text-xs text-tenue">—</span>
+                      <SelectorKr proyecto={p} krs={krs} />
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <HorasBar proyecto={p} />
+                    <HorasBar
+                      proyecto={p}
+                      avanceKr={kr ? progresoPct(kr) : null}
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -508,13 +601,18 @@ export function SolopClient({
                     <EstadoBadge estado={estadoFinanciero(p)} />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setModal({ abierto: true, proyecto: p })}
-                      className="rounded-md border border-linea px-2.5 py-1 text-xs font-medium"
-                    >
-                      Sincronizar
-                    </button>
+                    <div className="flex flex-col items-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setModal({ abierto: true, proyecto: p })}
+                        className="rounded-md border border-linea px-2.5 py-1 text-xs font-medium transition hover:border-oxford/50"
+                      >
+                        Sincronizar
+                      </button>
+                      <span className="whitespace-nowrap text-[11px] text-tenue">
+                        Última sincronización: {formatoSync(p.actualizado_at)}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               );

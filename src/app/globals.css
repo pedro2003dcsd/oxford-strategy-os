@@ -73,16 +73,53 @@ option {
   outline-offset: 2px;
 }
 
-/* "Descargar PDF" usa el diálogo de impresión del navegador: sacamos la
-   navegación y los controles para que el documento salga limpio. */
+/* "Descargar PDF" usa el diálogo de impresión del navegador. El documento
+   sale siempre en claro, aunque la pantalla esté en borravino: un PDF
+   ejecutivo con fondo oscuro es ilegible impreso y se come el tóner. */
 @media print {
+  :root {
+    --lienzo: #ffffff;
+    --panel: #ffffff;
+    --linea: #e2e8f0;
+    --linea-fuerte: #cbd5e1;
+    --tinta: #0f172a;
+    --tenue: #334155;
+    --oxford-suave: #fce7f0;
+  }
+
   header,
-  nav {
+  nav,
+  .print\:hidden {
     display: none !important;
   }
 
   body {
-    background: #fff;
-    color: #000;
+    background: #fff !important;
+    color: #0f172a !important;
+  }
+
+  /* Marca de agua textual: identifica el documento sin depender de imágenes. */
+  .documento-ejecutivo::before {
+    content: "GRUPO OXFORD · Oxford Strategy OS";
+    display: block;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e0115f;
+    color: #e0115f;
+    font-size: 10pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .documento-ejecutivo {
+    border: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Que un título no quede solo al pie de una página. */
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
   }
 }

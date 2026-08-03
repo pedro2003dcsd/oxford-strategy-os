@@ -130,6 +130,8 @@ export interface CompromisoLom {
   kr_id: string;
   descripcion: string;
   cumplido: boolean;
+  responsable: string | null;
+  fecha_limite: string | null;
   creado_at: string;
 }
 

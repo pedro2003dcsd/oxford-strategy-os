@@ -14,6 +14,22 @@ function optionalStr(formData: FormData, key: string) {
   return v || null;
 }
 
+/** Alinea un OKR trimestral huérfano a un OKR anual sin abrir el formulario
+ * completo: en la práctica los objetivos se crean primero y se alinean
+ * después, y esa fricción hace que queden sueltos para siempre. */
+export async function alinearOkrTrimestral(
+  okrTrimestralId: string,
+  okrAnualId: string | null
+) {
+  const supabase = await createClient();
+  await supabase
+    .from("okr_trimestral")
+    .update({ okr_anual_id: okrAnualId })
+    .eq("id", okrTrimestralId);
+  revalidatePath("/okrs");
+  revalidatePath("/");
+}
+
 export async function createPilar(
   _prevState: FormActionState,
   formData: FormData

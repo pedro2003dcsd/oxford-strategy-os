@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { PROMPTS_RAPIDOS, type ReferenciaKr } from "@/lib/scout";
+import {
+  PROMPTS_RAPIDOS,
+  sugerenciasSeguimiento,
+  type ReferenciaKr,
+} from "@/lib/scout";
 import { ScoutResponseViewer } from "@/components/ScoutResponseViewer";
 
 interface Burbuja {
@@ -25,14 +29,35 @@ function nuevoId() {
   return Math.random().toString(36).slice(2);
 }
 
-export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) {
+export function ScoutChat({
+  variant = "page",
+  onAbrirKr,
+}: {
+  variant?: "page" | "panel";
+  /** Si el contenedor sabe mostrar el panel lateral, los KRs mencionados lo
+   * abren en vez de navegar. */
+  onAbrirKr?: (krId: string) => void;
+}) {
   const [mensajes, setMensajes] = useState<Burbuja[]>([]);
   const [entrada, setEntrada] = useState("");
   const [cargando, setCargando] = useState(false);
   const [mensajeIdx, setMensajeIdx] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const ultimoId = mensajes[mensajes.length - 1]?.id;
+
+  async function copiarRespuesta(id: string, texto: string) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(id);
+      setTimeout(() => setCopiado(null), 2500);
+    } catch {
+      setCopiado(null);
+    }
+  }
 
   // Scroll automático al último mensaje.
   useEffect(() => {
@@ -202,12 +227,42 @@ export function ScoutChat({ variant = "page" }: { variant?: "page" | "panel" }) 
                 <ScoutResponseViewer
                   texto={m.content}
                   referencias={m.referencias ?? []}
+                  onAbrirKr={onAbrirKr}
                 />
-                {m.fuente === "reglas" && (
-                  <p className="text-xs text-tenue">
-                    Respuesta automática sobre los datos del sistema
-                    {m.motivo ? ` — ${m.motivo}` : ""}
-                  </p>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => copiarRespuesta(m.id, m.content)}
+                    className="rounded-md border border-linea px-2 py-1 text-[11px] font-medium text-tenue transition hover:border-oxford/50 hover:text-foreground"
+                  >
+                    {copiado === m.id ? "✓ Copiado" : "📋 Copiar respuesta para Slack"}
+                  </button>
+                  {m.fuente === "reglas" && (
+                    <span className="text-xs text-tenue">
+                      Respuesta automática sobre los datos del sistema
+                      {m.motivo ? ` — ${m.motivo}` : ""}
+                    </span>
+                  )}
+                </div>
+
+                {/* Sugerencias solo en el último mensaje: repetirlas en todos
+                    llena la conversación de botones viejos. */}
+                {m.id === ultimoId && !cargando && (
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {sugerenciasSeguimiento(m.content, m.referencias ?? []).map(
+                      (s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => enviar(s)}
+                          className="rounded-full border border-oxford/40 px-2.5 py-1 text-[11px] font-medium text-oxford transition hover:bg-oxford-suave"
+                        >
+                          {s}
+                        </button>
+                      )
+                    )}
+                  </div>
                 )}
               </div>
             </div>

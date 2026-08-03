@@ -4,6 +4,7 @@ import {
   systemPrompt,
   userPrompt,
   TIPOS_REPORTE,
+  SECCIONES_INFORME,
   type DatosInforme,
   type TipoReporte,
 } from "@/lib/informes";
@@ -26,7 +27,13 @@ export async function POST(request: Request) {
     return Response.json({ error: "No autenticado." }, { status: 401 });
   }
 
-  let body: { tipoReporte?: string; area?: string; trimestre?: string; anio?: number };
+  let body: {
+    tipoReporte?: string;
+    area?: string;
+    trimestre?: string;
+    anio?: number;
+    secciones?: unknown;
+  };
   try {
     body = await request.json();
   } catch {
@@ -86,6 +93,10 @@ export async function POST(request: Request) {
   const { data: proyectosData } = await supabase.from("proyectos_solop").select("*");
   const proyectos = (proyectosData ?? []) as ProyectoSolop[];
 
+  const seccionesPedidas = Array.isArray(body.secciones)
+    ? SECCIONES_INFORME.filter((s) => (body.secciones as unknown[]).includes(s))
+    : undefined;
+
   const datos: DatosInforme = {
     krs,
     checkIns,
@@ -95,6 +106,10 @@ export async function POST(request: Request) {
     area,
     trimestre,
     anio,
+    secciones:
+      seccionesPedidas && seccionesPedidas.length > 0
+        ? seccionesPedidas
+        : undefined,
   };
 
   const apiKey = process.env.ANTHROPIC_API_KEY;

@@ -49,6 +49,30 @@ export function tieneAlertaRentabilidad(p: ProyectoSolop): boolean {
   return margen !== null && margen < META_MARGEN;
 }
 
+/** Riesgo de scope creep para el contador de la Torre de Control. Con el
+ * umbral viejo (90% de horas) un proyecto como Batistella, con 88% de horas
+ * consumidas y el margen ya caído a 54%, no contaba: justo el caso que hay
+ * que ver. Ahora dispara con horas arriba del 75% o margen bajo la meta. */
+export function tieneRiesgoScopeCreep(p: ProyectoSolop): boolean {
+  const ratio = ratioHoras(p);
+  if (ratio !== null && ratio > UMBRAL_ALERTA_HORAS) return true;
+  return tieneAlertaRentabilidad(p);
+}
+
+/** Brecha en puntos entre el consumo de horas y el avance real del objetivo.
+ * Positiva quiere decir que se gastaron más horas de las que justifica el
+ * resultado. */
+export const BRECHA_SCOPE_CREEP = 15;
+
+export function brechaHorasVsAvance(
+  p: ProyectoSolop,
+  avanceKrPct: number | null
+): number | null {
+  const ratio = ratioHoras(p);
+  if (ratio === null || avanceKrPct === null) return null;
+  return Math.round(ratio * 100) - avanceKrPct;
+}
+
 export function costoPorHora(p: ProyectoSolop): number | null {
   if (p.horas_consumidas <= 0) return null;
   return p.costo_operativo / p.horas_consumidas;

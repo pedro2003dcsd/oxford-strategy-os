@@ -11,12 +11,18 @@ export async function addCompromisoLom(
   formData: FormData
 ): Promise<CompromisoState> {
   const descripcion = String(formData.get("descripcion") ?? "").trim();
+  const responsable = String(formData.get("responsable") ?? "").trim();
+  const fechaLimite = String(formData.get("fecha_limite") ?? "").trim();
+
   if (!descripcion) return { error: "Escribí el compromiso." };
+  if (!responsable) return { error: "Un compromiso sin dueño no se cumple: elegí responsable." };
 
   const supabase = await createClient();
   const { error } = await supabase.from("compromisos_lom").insert({
     kr_id: krId,
     descripcion,
+    responsable,
+    fecha_limite: fechaLimite || null,
   });
   if (error) return { error: error.message };
 

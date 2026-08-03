@@ -10,6 +10,12 @@ import { SemaforoBadge } from "@/components/SemaforoBadge";
 import { RentabilityBadge } from "@/components/RentabilityBadge";
 import { TrendChart } from "@/components/TrendChart";
 import { formatValor, progresoPct } from "@/lib/kr-logic";
+import {
+  faltaParaCierre,
+  linkWhatsApp,
+  mensajeRecordatorio,
+} from "@/lib/rito-semanal";
+import { Avatar } from "@/components/Avatar";
 import type { CheckIn, KeyResultCompleto, Semaforo } from "@/lib/types";
 
 const DIAS_FRESCO = 7;
@@ -101,7 +107,7 @@ function CheckInModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-linea/600 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -223,6 +229,45 @@ function CheckInModal({
             </div>
           )}
 
+          {(kr.iniciativas ?? []).length > 0 && (
+            <div className="space-y-2 rounded-lg border border-linea p-3">
+              <p className="text-xs font-medium text-tenue">
+                Iniciativas Clave · tildá lo que avanzaste
+              </p>
+              <ul className="space-y-1.5">
+                {[...(kr.iniciativas ?? [])]
+                  .sort((a, b) => a.orden - b.orden)
+                  .map((ini) => (
+                    <li key={ini.id} className="flex items-start gap-2 text-sm">
+                      <input type="hidden" name="iniciativa_todas" value={ini.id} />
+                      {ini.estado === "completado" && (
+                        <input
+                          type="hidden"
+                          name="iniciativa_ya_completada"
+                          value={ini.id}
+                        />
+                      )}
+                      <input
+                        type="checkbox"
+                        name="iniciativa_completada"
+                        value={ini.id}
+                        defaultChecked={ini.estado === "completado"}
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-linea-fuerte accent-[var(--oxford)]"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block leading-snug">{ini.titulo}</span>
+                        {ini.estado === "bloqueado" && (
+                          <span className="text-xs font-medium text-red-700 dark:text-red-400">
+                            ⚠️ Bloqueada
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <span className="text-xs font-medium text-tenue">Estado</span>
             <div className="grid grid-cols-3 gap-2">
@@ -276,6 +321,72 @@ function CheckInModal({
           </button>
         </form>
       </div>
+    </div>
+  );
+}
+
+/** Una fila por persona con check-ins pendientes, con el recordatorio listo
+ * para pegar. Evita que alguien tenga que redactar el mismo mensaje cada
+ * viernes. */
+function PanelRecordatorios({ pendientes }: { pendientes: KeyResultCompleto[] }) {
+  const [copiado, setCopiado] = useState<string | null>(null);
+
+  const porResponsable = useMemo(() => {
+    const map = new Map<string, KeyResultCompleto[]>();
+    for (const kr of pendientes) {
+      const r = kr.okr_trimestral?.responsable ?? "Sin asignar";
+      if (!map.has(r)) map.set(r, []);
+      map.get(r)!.push(kr);
+    }
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0], "es"));
+  }, [pendientes]);
+
+  async function copiar(responsable: string, krs: KeyResultCompleto[]) {
+    const mensaje = mensajeRecordatorio(responsable, krs);
+    try {
+      await navigator.clipboard.writeText(mensaje);
+      setCopiado(responsable);
+      setTimeout(() => setCopiado(null), 2500);
+    } catch {
+      setCopiado(null);
+    }
+  }
+
+  if (porResponsable.length === 0) return null;
+
+  return (
+    <div className="divide-y divide-linea rounded-lg border border-linea">
+      {porResponsable.map(([responsable, krs]) => (
+        <div
+          key={responsable}
+          className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5"
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <Avatar nombre={responsable} />
+            <span className="text-xs text-tenue">
+              {krs.length} KR{krs.length > 1 ? "s" : ""} sin cargar
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => copiar(responsable, krs)}
+              className="rounded-md border border-linea px-2.5 py-1 text-xs font-medium transition hover:border-oxford/50"
+            >
+              {copiado === responsable ? "✓ Copiado" : "🔔 Recordar"}
+            </button>
+            <a
+              href={linkWhatsApp(mensajeRecordatorio(responsable, krs))}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Abrir WhatsApp con el mensaje cargado"
+              className="rounded-md border border-linea px-2.5 py-1 text-xs font-medium transition hover:border-oxford/50"
+            >
+              WhatsApp ↗
+            </a>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -377,6 +488,15 @@ export function CheckInExpress({
             : "Sin check-ins todavía"}
         </p>
 
+        {/* El bloqueo va a la vista: si hay que abrir un modal para leerlo,
+            en la práctica nadie lo lee. */}
+        {kr.estado_semaforo !== "verde" && ultimo?.comentario_bloqueos && (
+          <p className="rounded-md bg-amber-500/10 px-2 py-1.5 text-xs leading-snug text-amber-800 dark:text-amber-300">
+            <span className="font-semibold">⚠️ Bloqueo:</span>{" "}
+            {ultimo.comentario_bloqueos}
+          </p>
+        )}
+
         <button
           type="button"
           onClick={() => setModalKr(kr)}
@@ -397,7 +517,12 @@ export function CheckInExpress({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">Check-in Express</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-semibold">Check-in Express</h1>
+            <span className="rounded-full border border-oxford/30 bg-oxford-suave px-2.5 py-1 text-xs font-medium text-oxford">
+              ⏳ Cierre de Check-ins: Viernes 18:00 hs · {faltaParaCierre()}
+            </span>
+          </div>
           <p className="text-sm text-tenue">
             {trimestre} {anio} · carga semanal en menos de 2 minutos por KR.
           </p>
@@ -436,6 +561,9 @@ export function CheckInExpress({
           <h2 className="text-sm font-semibold uppercase tracking-wide text-tenue">
             Pendientes esta semana ({pendientes.length})
           </h2>
+
+          <PanelRecordatorios pendientes={pendientes} />
+
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {pendientes.map((kr) => renderCard(kr, true))}
           </div>

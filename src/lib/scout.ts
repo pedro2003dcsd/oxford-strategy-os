@@ -46,6 +46,42 @@ export const PROMPTS_RAPIDOS = [
   { emoji: "📈", texto: "Resumen rápido de la LOM" },
 ] as const;
 
+/** Preguntas de seguimiento a partir de lo que la respuesta acaba de decir.
+ * Se arman por reglas: pedirle otra vuelta a la IA solo para sugerir tres
+ * preguntas costaría casi lo mismo que la respuesta. */
+export function sugerenciasSeguimiento(
+  respuesta: string,
+  referencias: ReferenciaKr[]
+): string[] {
+  const texto = respuesta.toLowerCase();
+  const sugerencias: string[] = [];
+
+  const enRojo = referencias.find(
+    (r) => r.semaforo === "rojo" && texto.includes(r.titulo.toLowerCase())
+  );
+  const mencionado = referencias.find((r) => texto.includes(r.titulo.toLowerCase()));
+
+  if (enRojo) {
+    sugerencias.push(`¿Qué necesita ${enRojo.responsable} para destrabarlo?`);
+  }
+  if (/margen|rentabilidad|scope creep|solop/.test(texto)) {
+    sugerencias.push("¿Qué proyectos están por debajo del 65% de margen?");
+  }
+  if (/bloqueo|trabad|demorad|frena/.test(texto)) {
+    sugerencias.push("¿Qué áreas dependen de otras para avanzar?");
+  }
+  if (mencionado && sugerencias.length < 3) {
+    sugerencias.push(`¿Cómo viene el área ${mencionado.area} en general?`);
+  }
+  if (/pendiente|check-?in/.test(texto)) {
+    sugerencias.push("¿Quiénes vienen atrasados con los check-ins?");
+  }
+
+  sugerencias.push("Armá la agenda de la LOM de esta semana");
+
+  return [...new Set(sugerencias)].slice(0, 3);
+}
+
 export function referenciasKr(krs: KeyResultCompleto[]): ReferenciaKr[] {
   return krs.map((kr) => ({
     id: kr.id,

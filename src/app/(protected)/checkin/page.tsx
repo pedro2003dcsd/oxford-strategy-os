@@ -17,6 +17,7 @@ export default async function CheckInPage() {
     .select(
       `*,
       hitos_kr ( * ),
+      iniciativas ( * ),
       okr_trimestral!inner (
         *,
         okr_anual ( *, pilares ( * ) )

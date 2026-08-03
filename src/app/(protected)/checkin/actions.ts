@@ -53,6 +53,28 @@ export async function submitCheckInExpress(
     }
   }
 
+  // Iniciativas tildadas en el mismo acto: se marcan completadas y las
+  // destildadas vuelven a pendiente, salvo que estén bloqueadas o en curso
+  // (ese estado lo maneja el responsable desde la ficha, no el check-in).
+  const iniciativasTodas = formData.getAll("iniciativa_todas").map(String);
+  if (iniciativasTodas.length > 0) {
+    const completadas = new Set(formData.getAll("iniciativa_completada").map(String));
+    const previas = new Set(formData.getAll("iniciativa_ya_completada").map(String));
+
+    for (const id of iniciativasTodas) {
+      const estaCompletada = completadas.has(id);
+      if (estaCompletada === previas.has(id)) continue;
+      const { error } = await supabase
+        .from("iniciativas")
+        .update({
+          estado: estaCompletada ? "completado" : "pendiente",
+          actualizado_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+      if (error) return { error: error.message };
+    }
+  }
+
   const { error } = await supabase.from("check_ins").insert({
     kr_id: krId,
     usuario,

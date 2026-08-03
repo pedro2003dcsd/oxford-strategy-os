@@ -10,6 +10,7 @@ export default async function LomPage() {
     .select(
       `*,
       hitos_kr ( * ),
+      iniciativas ( * ),
       okr_trimestral (
         *,
         okr_anual ( *, pilares ( * ) )

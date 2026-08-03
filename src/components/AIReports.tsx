@@ -1,9 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import clsx from "clsx";
-import { TIPOS_REPORTE, TIPO_REPORTE_LABELS, type TipoReporte } from "@/lib/informes";
+import {
+  TIPOS_REPORTE,
+  TIPO_REPORTE_LABELS,
+  SECCIONES_INFORME,
+  SECCION_LABELS,
+  type InformeGuardado,
+  type SeccionInforme,
+  type TipoReporte,
+} from "@/lib/informes";
+import {
+  borrarInforme,
+  guardarInforme,
+} from "@/app/(protected)/informes/actions";
 import { AREAS, TRIMESTRES } from "@/lib/types";
+
+const MAIL_DIRECCION = "";
 
 const inputClass =
   "rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm border-linea ";
@@ -122,11 +136,18 @@ export function AIReports({
   areasConDatos,
   trimestreActual,
   anioActual,
+  guardados = [],
 }: {
   areasConDatos: string[];
   trimestreActual: string;
   anioActual: number;
+  guardados?: InformeGuardado[];
 }) {
+  const [secciones, setSecciones] = useState<SeccionInforme[]>([
+    ...SECCIONES_INFORME,
+  ]);
+  const [guardando, startGuardar] = useTransition();
+  const [guardado, setGuardado] = useState(false);
   const [tipo, setTipo] = useState<TipoReporte>("semanal_lom");
   const [trimestre, setTrimestre] = useState<string>(trimestreActual);
   const [area, setArea] = useState<string>(areasConDatos[0] ?? AREAS[0]);
@@ -163,6 +184,7 @@ export function AIReports({
           trimestre,
           anio: anioActual,
           area: tipo === "area" ? area : undefined,
+          secciones,
         }),
       });
       const data = await res.json();
@@ -174,6 +196,7 @@ export function AIReports({
       setFuente(data.fuente);
       setMotivo(data.motivo ?? null);
       setEditando(false);
+      setGuardado(false);
     } catch {
       setError("No se pudo contactar al servidor.");
     } finally {
@@ -186,6 +209,49 @@ export function AIReports({
     navigator.clipboard.writeText(markdown).then(() => {
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2000);
+    });
+  }
+
+  function tituloInforme() {
+    const etiqueta = TIPO_REPORTE_LABELS[tipo];
+    const fecha = new Date().toLocaleDateString("es-AR");
+    return tipo === "area"
+      ? `${etiqueta} — ${area} — ${fecha}`
+      : `${etiqueta} — ${trimestre} ${anioActual} — ${fecha}`;
+  }
+
+  /** Abre el cliente de mail con el informe cargado. No se manda solo a
+   * propósito: el envío lo confirma quien firma el informe. */
+  function enviarPorMail() {
+    if (!markdown) return;
+    const asunto = encodeURIComponent(`[Oxford Strategy OS] ${tituloInforme()}`);
+    // Los clientes de mail cortan los mailto largos, así que va un resumen
+    // y el texto completo queda en el portapapeles.
+    const cuerpo = encodeURIComponent(
+      `${markdown.slice(0, 1500)}${markdown.length > 1500 ? "\n\n[...] El informe completo quedó copiado en el portapapeles." : ""}`
+    );
+    navigator.clipboard.writeText(markdown).catch(() => {});
+    window.location.href = `mailto:${MAIL_DIRECCION}?subject=${asunto}&body=${cuerpo}`;
+  }
+
+  function guardar() {
+    if (!markdown) return;
+    const fd = new FormData();
+    fd.set("markdown", markdown);
+    fd.set("tipo_reporte", tipo);
+    fd.set("titulo", tituloInforme());
+    fd.set("fuente", fuente ?? "reglas");
+    if (tipo === "area") fd.set("area", area);
+    fd.set("trimestre", trimestre);
+    fd.set("anio", String(anioActual));
+    startGuardar(async () => {
+      const res = await guardarInforme(undefined, fd);
+      if (res?.ok) {
+        setGuardado(true);
+        setTimeout(() => setGuardado(false), 3000);
+      } else if (res?.error) {
+        setError(res.error);
+      }
     });
   }
 
@@ -259,10 +325,36 @@ export function AIReports({
           </div>
         )}
 
+        <div className="space-y-1">
+          <label className={labelClass}>Secciones a incluir</label>
+          <div className="flex flex-wrap gap-3 py-1.5">
+            {SECCIONES_INFORME.map((s) => (
+              <label key={s} className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={secciones.includes(s)}
+                  onChange={(e) =>
+                    setSecciones((prev) =>
+                      e.target.checked
+                        ? [...prev, s]
+                        : prev.filter((x) => x !== s)
+                    )
+                  }
+                  className="h-4 w-4 rounded border-linea-fuerte accent-[var(--oxford)]"
+                />
+                {SECCION_LABELS[s]}
+              </label>
+            ))}
+          </div>
+        </div>
+
         <button
           type="button"
           onClick={generar}
-          disabled={cargando}
+          disabled={cargando || secciones.length === 0}
+          title={
+            secciones.length === 0 ? "Elegí al menos una sección" : undefined
+          }
           className="rounded-md bg-oxford px-4 py-2 text-sm font-medium text-white transition hover:bg-oxford-fuerte disabled:opacity-50"
         >
           {cargando ? "Generando…" : "✨ Generar informe con IA"}
@@ -312,13 +404,6 @@ export function AIReports({
               </button>
               <button
                 type="button"
-                onClick={copiar}
-                className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium"
-              >
-                {copiado ? "✓ Copiado" : "Copiar"}
-              </button>
-              <button
-                type="button"
                 onClick={descargarMd}
                 className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium"
               >
@@ -326,12 +411,39 @@ export function AIReports({
               </button>
               <button
                 type="button"
-                onClick={() => window.print()}
-                className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium"
+                onClick={guardar}
+                disabled={guardando}
+                className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium disabled:opacity-50"
               >
-                Descargar PDF
+                {guardado ? "✓ Guardado" : guardando ? "Guardando…" : "💾 Guardar"}
               </button>
             </div>
+          </div>
+
+          {/* Botonera principal de salida: lo que se hace con el informe una
+              vez que está listo. Separada de los controles de edición. */}
+          <div className="flex flex-wrap gap-2 print:hidden">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="rounded-md bg-oxford px-4 py-2 text-sm font-semibold text-white transition hover:bg-oxford-fuerte"
+            >
+              📄 Descargar PDF
+            </button>
+            <button
+              type="button"
+              onClick={copiar}
+              className="rounded-md border border-oxford/40 px-4 py-2 text-sm font-semibold text-oxford transition hover:bg-oxford-suave"
+            >
+              {copiado ? "✓ Copiado" : "📋 Copiar Markdown (Notion)"}
+            </button>
+            <button
+              type="button"
+              onClick={enviarPorMail}
+              className="rounded-md border border-oxford/40 px-4 py-2 text-sm font-semibold text-oxford transition hover:bg-oxford-suave"
+            >
+              📧 Enviar a Dirección
+            </button>
           </div>
 
           {editando ? (
@@ -344,13 +456,91 @@ export function AIReports({
           ) : (
             <div
               ref={impresionRef}
-              className="rounded-lg border border-linea bg-panel p-6 print:border-0 print:p-0"
+              className="documento-ejecutivo rounded-lg border border-linea bg-panel p-6"
             >
               <MarkdownView texto={markdown} />
             </div>
           )}
         </div>
       )}
+
+      <HistoricoInformes
+        guardados={guardados}
+        onAbrir={(informe) => {
+          setMarkdown(informe.markdown);
+          setFuente(informe.fuente);
+          setMotivo(
+            `Informe guardado el ${new Date(informe.creado_at).toLocaleString("es-AR")}`
+          );
+          setEditando(false);
+          setError(null);
+        }}
+      />
     </div>
+  );
+}
+
+/** Minutas anteriores. Se guardan tal cual se generaron: regenerar el informe
+ * de la LOM pasada con los datos de hoy daría otro texto. */
+function HistoricoInformes({
+  guardados,
+  onAbrir,
+}: {
+  guardados: InformeGuardado[];
+  onAbrir: (informe: InformeGuardado) => void;
+}) {
+  const [borrando, startBorrar] = useTransition();
+
+  if (guardados.length === 0) {
+    return (
+      <p className="text-sm text-tenue print:hidden">
+        Todavía no hay informes guardados. Generá uno y tocá 💾 Guardar para
+        poder volver a consultarlo.
+      </p>
+    );
+  }
+
+  return (
+    <section className="space-y-2 print:hidden">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-tenue">
+        Informes guardados ({guardados.length})
+      </h2>
+      <ul className="divide-y divide-linea rounded-lg border border-linea">
+        {guardados.map((g) => (
+          <li
+            key={g.id}
+            className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5"
+          >
+            <button
+              type="button"
+              onClick={() => onAbrir(g)}
+              className="min-w-0 flex-1 text-left"
+            >
+              <span className="block truncate text-sm font-medium hover:underline">
+                {g.titulo}
+              </span>
+              <span className="block text-xs text-tenue">
+                {new Date(g.creado_at).toLocaleString("es-AR")}
+                {g.fuente === "ia" ? " · ✦ IA" : " · automático"}
+                {g.creado_por ? ` · ${g.creado_por}` : ""}
+              </span>
+            </button>
+            <button
+              type="button"
+              disabled={borrando}
+              onClick={() =>
+                startBorrar(() => {
+                  borrarInforme(g.id);
+                })
+              }
+              aria-label={`Borrar ${g.titulo}`}
+              className="shrink-0 rounded p-1 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
+            >
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

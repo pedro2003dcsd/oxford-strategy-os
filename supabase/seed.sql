@@ -284,6 +284,27 @@ begin
   values
     (kr, 'Recordatorio automático de vencimientos', 'Dolores García Díaz', 'completado', current_date - 11, 1),
     (kr, 'Revisión quincenal de cartera con Dirección', 'Dolores García Díaz', 'pendiente', current_date + 6, 2);
+
+  -- ----------------------------------------------------------
+  -- 11. Compromisos de la LOM pasada
+  -- ----------------------------------------------------------
+  -- Anotados hace más de una semana: son los que la reunión de hoy tiene que
+  -- revisar en el bloque "Compromisos de la LOM pasada".
+  select id into kr from key_results
+    where titulo = 'Entregar el 100% de los kits audiovisuales y creativos de campaña a tiempo';
+  insert into compromisos_lom (kr_id, descripcion, responsable, fecha_limite, cumplido, creado_at)
+  values
+    (kr, 'Definir con Planificación la prioridad de los pedidos Ad-Hoc',
+     'Laura Bonetto', current_date - 2, false, now() - interval '9 days'),
+    (kr, 'Presentar las plantillas maestras de Figma al equipo',
+     'Matías Merlo', current_date + 4, true, now() - interval '9 days');
+
+  insert into compromisos_lom (kr_id, descripcion, responsable, fecha_limite, cumplido, creado_at)
+  values
+    (kr_batistella, 'Entregar los adaptados verticales para Meta Ads',
+     'Matías Merlo', current_date - 1, false, now() - interval '8 days'),
+    (kr_batistella, 'Revisar el scope de Batistella con el líder de cuenta',
+     'Cristóbal Dávalos', current_date + 3, false, now() - interval '8 days');
 end $$;
 
 commit;

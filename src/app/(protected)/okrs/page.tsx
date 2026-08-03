@@ -4,7 +4,8 @@ import { SemaforoBadge } from "@/components/SemaforoBadge";
 import { NewOkrAnualForm, NewOkrTrimestralForm, NewPilarForm } from "@/components/OkrForms";
 import { Collapsible } from "@/components/Collapsible";
 import { KrModal } from "@/components/KrModal";
-import { hasAlertaRentabilidad } from "@/lib/kr-logic";
+import { AlinearOkr } from "@/components/AlinearOkr";
+import { hasAlertaRentabilidad, progresoPct } from "@/lib/kr-logic";
 import type {
   HitoKr,
   KeyResult,
@@ -61,6 +62,71 @@ export default async function OkrsPage() {
   for (const kr of keyResultsList) {
     if (!krsPorTrim.has(kr.okr_trimestral_id)) krsPorTrim.set(kr.okr_trimestral_id, []);
     krsPorTrim.get(kr.okr_trimestral_id)!.push(kr);
+  }
+
+  /** Todos los KRs que cuelgan de un OKR anual, atravesando sus trimestrales. */
+  function krsDeAnual(okrAnualId: string) {
+    const trims = okrsTrimPorAnual.get(okrAnualId) ?? [];
+    return trims.flatMap((ot) => krsPorTrim.get(ot.id) ?? []);
+  }
+
+  function krsDePilar(pilarId: string) {
+    const anuales = okrsAnualesPorPilar.get(pilarId) ?? [];
+    return anuales.flatMap((oa) => krsDeAnual(oa.id));
+  }
+
+  /** Conteo de semáforo para la barra colapsada: ver la salud sin desplegar
+   * es lo que separa un árbol útil de una lista de títulos. */
+  function SaludBadge({ krs }: { krs: (typeof keyResultsList)[number][] }) {
+    if (krs.length === 0) {
+      return <span className="text-xs text-tenue">Sin KRs</span>;
+    }
+    const verde = krs.filter((k) => k.estado_semaforo === "verde").length;
+    const amarillo = krs.filter((k) => k.estado_semaforo === "amarillo").length;
+    const rojo = krs.filter((k) => k.estado_semaforo === "rojo").length;
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-linea/60 px-2.5 py-1 text-xs font-medium">
+        <span className="text-emerald-700 dark:text-emerald-400">{verde} 🟢</span>
+        <span className="text-tenue">|</span>
+        <span className="text-amber-700 dark:text-amber-400">{amarillo} 🟡</span>
+        <span className="text-tenue">|</span>
+        <span className="text-red-700 dark:text-red-400">{rojo} 🔴</span>
+      </span>
+    );
+  }
+
+  /** Avance consolidado: promedio simple del progreso de los KRs que cuelgan.
+   * Simple a propósito, ponderar por peso exige un campo que hoy no existe. */
+  function AvanceAnual({ krs }: { krs: (typeof keyResultsList)[number][] }) {
+    if (krs.length === 0) return null;
+    const pct = Math.round(
+      krs.reduce((acc, kr) => {
+        if (kr.tipo_medicion === "hitos") {
+          const total = kr.hitos_kr.length;
+          return (
+            acc +
+            (total === 0
+              ? 0
+              : (kr.hitos_kr.filter((h) => h.cumplido).length / total) * 100)
+          );
+        }
+        return acc + progresoPct(kr);
+      }, 0) / krs.length
+    );
+
+    return (
+      <div className="mt-1.5 flex items-center gap-2">
+        <div className="h-1.5 w-32 overflow-hidden rounded-full bg-linea">
+          <div
+            className="h-full rounded-full bg-oxford transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <span className="text-xs font-medium text-tenue">
+          {pct}% consolidado · {krs.length} KR{krs.length > 1 ? "s" : ""}
+        </span>
+      </div>
+    );
   }
 
   function renderKr(kr: (typeof keyResultsList)[number]) {
@@ -121,12 +187,18 @@ export default async function OkrsPage() {
         level={1}
         defaultOpen
         summary={
-          <p className="text-sm font-semibold">
-            {oa.titulo}{" "}
-            {oa.responsable && (
-              <span className="font-normal text-tenue">· {oa.responsable}</span>
-            )}
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">
+                {oa.titulo}{" "}
+                {oa.responsable && (
+                  <span className="font-normal text-tenue">· {oa.responsable}</span>
+                )}
+              </p>
+              <AvanceAnual krs={krsDeAnual(oa.id)} />
+            </div>
+            <SaludBadge krs={krsDeAnual(oa.id)} />
+          </div>
         }
       >
         {trims.length === 0 ? (
@@ -193,11 +265,14 @@ export default async function OkrsPage() {
               <Collapsible
                 defaultOpen
                 summary={
-                  <div>
-                    <h2 className="text-base font-semibold">{pilar.nombre}</h2>
-                    {pilar.descripcion && (
-                      <p className="text-sm text-tenue">{pilar.descripcion}</p>
-                    )}
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="text-base font-semibold">{pilar.nombre}</h2>
+                      {pilar.descripcion && (
+                        <p className="text-sm text-tenue">{pilar.descripcion}</p>
+                      )}
+                    </div>
+                    <SaludBadge krs={krsDePilar(pilar.id)} />
                   </div>
                 }
               >
@@ -227,7 +302,19 @@ export default async function OkrsPage() {
             <h2 className="mb-2 text-base font-semibold text-tenue">
               OKRs trimestrales sin alinear a un OKR anual
             </h2>
-            <div className="space-y-2">{okrsTrimSinAlinear.map(renderOkrTrimestral)}</div>
+            <div className="space-y-3">
+              {okrsTrimSinAlinear.map((ot) => (
+                <div key={ot.id} className="space-y-1.5">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <AlinearOkr
+                      okrTrimestralId={ot.id}
+                      okrsAnuales={okrsAnualesList}
+                    />
+                  </div>
+                  {renderOkrTrimestral(ot)}
+                </div>
+              ))}
+            </div>
           </section>
         )}
       </div>

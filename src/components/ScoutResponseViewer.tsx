@@ -27,14 +27,61 @@ function normalizar(s: string): string {
   return s.trim().toLowerCase();
 }
 
+/** Estados y márgenes que la IA escribe como texto plano se muestran como
+ * insignias: proyectado en una pantalla, "Margen 54%" en gris se pierde. */
+const PATRON_BADGE =
+  /(🔴\s*Retrasado|🟡\s*En riesgo|🟢\s*En línea|Retrasado|En riesgo|En línea|[Mm]argen(?:\s+real)?\s+\d+(?:[.,]\d+)?\s*%|\d+(?:[.,]\d+)?\s*%\s+de\s+margen)/g;
+
+/** Versión anclada y sin flag global: `test` sobre un regex /g mueve
+ * lastIndex y devuelve falsos negativos en llamadas alternadas. */
+const ES_BADGE = new RegExp(`^(?:${PATRON_BADGE.source})$`);
+
+function claseBadge(texto: string): string {
+  const t = texto.toLowerCase();
+  if (t.includes("retrasado") || t.includes("🔴")) {
+    return "bg-red-500/15 text-red-700 dark:text-red-300";
+  }
+  if (t.includes("riesgo") || t.includes("🟡")) {
+    return "bg-amber-500/15 text-amber-800 dark:text-amber-300";
+  }
+  if (t.includes("línea") || t.includes("🟢")) {
+    return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
+  }
+  // Márgenes: por debajo de la meta van en rojo, arriba en verde.
+  const n = Number(t.replace(",", ".").match(/(\d+(?:\.\d+)?)\s*%/)?.[1]);
+  if (!Number.isNaN(n)) {
+    return n < 65
+      ? "bg-red-500/15 text-red-700 dark:text-red-300"
+      : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
+  }
+  return "bg-linea text-foreground";
+}
+
+function Badge({ texto }: { texto: string }) {
+  const esMargen = /margen|%/i.test(texto);
+  return (
+    <span
+      className={clsx(
+        "mx-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+        claseBadge(texto)
+      )}
+    >
+      {esMargen && !texto.includes("💰") ? `💰 ${texto}` : texto}
+    </span>
+  );
+}
+
 /** Render de la respuesta de Scout: Markdown acotado (títulos, viñetas,
  * negritas) + enlaces automáticos a los KRs que la IA menciona entre comillas. */
 export function ScoutResponseViewer({
   texto,
   referencias,
+  onAbrirKr,
 }: {
   texto: string;
   referencias: ReferenciaKr[];
+  /** Si se pasa, el KR abre el panel lateral en vez de navegar a su ficha. */
+  onAbrirKr?: (krId: string) => void;
 }) {
   const porTitulo = new Map<string, ReferenciaKr>();
   for (const r of referencias) porTitulo.set(normalizar(r.titulo), r);
@@ -47,7 +94,8 @@ export function ScoutResponseViewer({
     textoPlano.includes(normalizar(a))
   );
 
-  /** Resuelve negritas y convierte "títulos entre comillas" en enlaces al KR. */
+  /** Resuelve negritas, convierte "títulos entre comillas" en enlaces al KR
+   * y transforma los estados y márgenes sueltos en insignias. */
   function inline(linea: string, key: number) {
     const partes = linea.split(/(\*\*[^*]+\*\*|"[^"]+")/g);
     return (
@@ -60,30 +108,50 @@ export function ScoutResponseViewer({
             const titulo = contenido.slice(1, -1);
             const ref = porTitulo.get(normalizar(titulo));
             if (ref) {
-              return (
-                <Link
-                  key={i}
-                  href={`/kr/${ref.id}`}
+              const clase = clsx(
+                "mx-0.5 inline-flex items-center gap-1.5 rounded-md bg-linea/60 px-1.5 py-0.5 text-left align-baseline transition hover:bg-linea",
+                negrita && "font-semibold"
+              );
+              const tooltip = `${ESTADO_LABEL[ref.semaforo]} · ${ref.area} · ${ref.responsable}`;
+              const punto = (
+                <span
                   className={clsx(
-                    "mx-0.5 inline-flex items-center gap-1.5 rounded-md bg-linea/60 px-1.5 py-0.5 align-baseline transition hover:bg-linea",
-                    negrita && "font-semibold"
+                    "h-1.5 w-1.5 shrink-0 rounded-full",
+                    DOT_CLASSES[ref.semaforo]
                   )}
-                  title={`${ESTADO_LABEL[ref.semaforo]} · ${ref.area} · ${ref.responsable}`}
+                />
+              );
+
+              return onAbrirKr ? (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => onAbrirKr(ref.id)}
+                  className={clase}
+                  title={tooltip}
                 >
-                  <span
-                    className={clsx(
-                      "h-1.5 w-1.5 shrink-0 rounded-full",
-                      DOT_CLASSES[ref.semaforo]
-                    )}
-                  />
+                  {punto}
+                  {titulo}
+                </button>
+              ) : (
+                <Link key={i} href={`/kr/${ref.id}`} className={clase} title={tooltip}>
+                  {punto}
                   {titulo}
                 </Link>
               );
             }
           }
 
-          if (negrita) return <strong key={i}>{contenido}</strong>;
-          return <span key={i}>{contenido}</span>;
+          const cuerpo = contenido.split(PATRON_BADGE).map((trozo, j) =>
+            ES_BADGE.test(trozo) ? (
+              <Badge key={j} texto={trozo} />
+            ) : (
+              <span key={j}>{trozo}</span>
+            )
+          );
+
+          if (negrita) return <strong key={i}>{cuerpo}</strong>;
+          return <span key={i}>{cuerpo}</span>;
         })}
       </span>
     );
