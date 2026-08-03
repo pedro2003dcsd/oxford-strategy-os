@@ -56,6 +56,17 @@ body {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* El desplegable nativo de un <select> no hereda el tema: el navegador lo
+   pinta con su fondo por defecto (blanco) y las opciones toman el color de
+   texto del select, que en oscuro es claro. Resultado: blanco sobre blanco.
+   Se pintan las opciones a mano. Va sobre el elemento, no sobre una clase,
+   para que cualquier select con su propio fondo (los estados de iniciativa)
+   siga ganando por especificidad. */
+option {
+  background-color: var(--panel);
+  color: var(--tinta);
+}
+
 /* El foco tiene que verse: se usa con teclado en las reuniones. */
 :focus-visible {
   outline: 2px solid var(--oxford);
