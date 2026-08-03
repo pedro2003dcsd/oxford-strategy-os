@@ -29,10 +29,34 @@ create unique index if not exists idx_usuarios_autorizados_email
 -- ------------------------------------------------------------
 -- Semilla: sin esto, la primera persona que entre queda afuera y nadie
 -- puede agregar a nadie. Es el candado que se cierra con la llave adentro.
+--
+-- No se escribe ningún mail a mano: se autorizan las cuentas que ya
+-- existen. Así nadie que hoy entra puede quedar afuera mañana, sin importar
+-- con qué dirección se haya creado la cuenta.
 -- ------------------------------------------------------------
-insert into usuarios_autorizados (email, nombre, responsable, rol)
-values ('pedrogrupooxford@gmail.com', 'Pedro', 'Mateo', 'direccion')
+insert into usuarios_autorizados (email, nombre, rol)
+select
+  u.email,
+  initcap(replace(split_part(u.email, '@', 1), '.', ' ')),
+  'lider'
+from auth.users u
+where u.email is not null
 on conflict do nothing;
+
+-- Y la cuenta más antigua queda como Dirección, para que haya alguien que
+-- pueda administrar la lista. Solo si todavía no hay ninguna.
+update usuarios_autorizados
+set rol = 'direccion'
+where id = (
+  select ua.id
+  from usuarios_autorizados ua
+  join auth.users u on lower(u.email) = lower(ua.email)
+  order by u.created_at
+  limit 1
+)
+and not exists (
+  select 1 from usuarios_autorizados where rol = 'direccion' and activo
+);
 
 -- ------------------------------------------------------------
 -- Funciones de apoyo

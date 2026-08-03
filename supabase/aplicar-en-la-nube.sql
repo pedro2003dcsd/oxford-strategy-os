@@ -129,10 +129,31 @@ create unique index if not exists idx_usuarios_autorizados_email
   on usuarios_autorizados (lower(email));
 
 -- Semilla: sin esto queda el candado cerrado con la llave adentro.
--- ⚠ Si tu cuenta de producción usa otro mail, cambiálo acá ANTES de correr.
-insert into usuarios_autorizados (email, nombre, responsable, rol)
-values ('pedrogrupooxford@gmail.com', 'Pedro', 'Mateo', 'direccion')
+-- No hay ningún mail escrito a mano: se autorizan las cuentas que ya
+-- existen en Supabase, así nadie que hoy entra queda afuera mañana.
+insert into usuarios_autorizados (email, nombre, rol)
+select
+  u.email,
+  initcap(replace(split_part(u.email, '@', 1), '.', ' ')),
+  'lider'
+from auth.users u
+where u.email is not null
 on conflict do nothing;
+
+-- La cuenta más antigua queda como Dirección, para que haya alguien que
+-- pueda administrar la lista. Solo si todavía no hay ninguna.
+update usuarios_autorizados
+set rol = 'direccion'
+where id = (
+  select ua.id
+  from usuarios_autorizados ua
+  join auth.users u on lower(u.email) = lower(ua.email)
+  order by u.created_at
+  limit 1
+)
+and not exists (
+  select 1 from usuarios_autorizados where rol = 'direccion' and activo
+);
 
 -- SECURITY DEFINER a propósito: si leyeran la tabla con RLS puesta, la
 -- política que las usa se llamaría a sí misma y entraría en recursión.
