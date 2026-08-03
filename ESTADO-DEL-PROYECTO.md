@@ -56,6 +56,24 @@ herramienta interna).
    trimestral y reporte de área. Usa la API de Claude si hay
    `ANTHROPIC_API_KEY`; si no, genera el informe por reglas sobre los mismos
    datos y lo avisa en pantalla.
+6. **Scout AI** (`/scout` + botón flotante global) — chat en lenguaje natural
+   sobre el estado real de la base. Prompts rápidos de KRs en rojo, check-ins
+   pendientes, alertas de rentabilidad y resumen de LOM. Enlaza los KRs que
+   menciona. Igual que los informes: usa la API de Claude si hay key, y si no
+   responde por reglas.
+7. **Iniciativas** — capa operativa debajo de cada KR (qué está haciendo el
+   POD esta semana). Se ven en la card, en el drawer lateral y en la ficha del
+   KR, con estado, responsable, fecha límite y link de recurso.
+
+## Diseño
+
+Identidad Oxford con tokens semánticos en `globals.css`: `bg-panel`,
+`text-tenue`, `border-linea` y el acento `bg-oxford` (magenta `#E0115F`). Hay
+dos temas que salen del mismo juego de tokens y se eligen por
+`prefers-color-scheme`: claro sobre `#FAFAFA` y oscuro borravino sobre
+`#0F070E`. **Los componentes no usan colores crudos** — para cambiar la
+paleta se toca solo `globals.css`. La excepción son los colores de semáforo
+(verde/amarillo/rojo), que son semánticos y no de marca.
 6. **Scout AI** (`/scout`) — chat en lenguaje natural sobre el estado real del
    trimestre. En cada consulta la API Route `/api/ai/scout-chat` lee KRs,
    check-ins, compromisos LOM y proyectos SOLOP, y arma con eso el contexto que
@@ -74,6 +92,13 @@ Migraciones en `supabase/migrations/`:
   check-in, vistas de estado/alertas, RLS y GRANTs.
 - `0002_compromisos_lom.sql` — compromisos de destrabe de la LOM.
 - `0003_proyectos_solop.sql` — proyectos con horas, facturación y costos.
+- `0004_kr_descendente.sql` — las vistas daban por cumplido un KR cuya métrica
+  baja (plazo de cobro de 45 a 25 días). Ahora comparan según el sentido.
+- `0005_iniciativas.sql` — tabla `iniciativas` y columna `link_trabajo` en
+  `key_results`.
+
+Para la nube hay un atajo: `supabase/aplicar-en-la-nube.sql` junta 0004, 0005
+y los datos de demo en un solo script idempotente listo para pegar.
 
 **Importante:** las migraciones se aplican a mano en la nube. Cuando se crea
 una tabla nueva, hay que pegar el SQL en el editor de Supabase
