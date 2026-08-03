@@ -39,9 +39,12 @@ const labelClass = "text-xs font-medium text-tenue";
  * última vez es la diferencia entre confiar en el número y no. */
 function formatoSync(iso: string): string {
   const fecha = new Date(iso);
+  // hour12 explícito: es-AR devuelve "10:53 a. m." y con el sufijo quedaba
+  // "10:53 a. m. hs".
   const hora = fecha.toLocaleTimeString("es-AR", {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   });
   const hoy = new Date();
   const mismoDia = fecha.toDateString() === hoy.toDateString();
