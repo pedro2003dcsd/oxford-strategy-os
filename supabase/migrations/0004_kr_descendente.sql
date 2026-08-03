@@ -2,7 +2,13 @@
 -- que es falso para las métricas que bajan (plazo de cobro de 45 a 25 días,
 -- reducción de costos, rotación). Un KR es descendente cuando la meta está
 -- por debajo del punto de partida; ahí la comparación se invierte.
-create or replace view v_key_results_estado as
+-- Se recrean desde cero en vez de con "create or replace": ese comando no
+-- puede cambiar la lista de columnas, y el select * de la vista arrastra las
+-- columnas nuevas de key_results.
+drop view if exists v_alertas_rentabilidad;
+drop view if exists v_key_results_estado;
+
+create view v_key_results_estado as
 select
   kr.*,
   case
@@ -18,7 +24,7 @@ from key_results kr;
 
 -- v_alertas_rentabilidad se apoya en la vista anterior, así que la recreamos
 -- para que tome la definición nueva.
-create or replace view v_alertas_rentabilidad as
+create view v_alertas_rentabilidad as
 select *
 from v_key_results_estado
 where cumplido = true
