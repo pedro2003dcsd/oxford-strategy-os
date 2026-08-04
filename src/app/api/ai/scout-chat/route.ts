@@ -13,6 +13,12 @@ import type {
   KeyResultCompleto,
   ProyectoSolop,
 } from "@/lib/types";
+// PROTOTIPO: datos de maqueta del módulo Performance Clientes. Se agregan al
+// contexto para poder mostrarlo en la demo. Sale junto con la rama.
+import {
+  contextoPrototipo,
+  respuestaPrototipoFallback,
+} from "@/lib/prototipo/clientes";
 
 /** Tope de historial que mandamos a la IA: alcanza para mantener el hilo sin
  * inflar el costo de cada consulta. */
@@ -135,7 +141,9 @@ export async function POST(request: Request) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return Response.json({
-      respuesta: respuestaFallback(ultimo.content, datos),
+      respuesta:
+        respuestaPrototipoFallback(ultimo.content) ??
+        respuestaFallback(ultimo.content, datos),
       fuente: "reglas",
       motivo: "Falta configurar ANTHROPIC_API_KEY.",
       referencias,
@@ -149,13 +157,15 @@ export async function POST(request: Request) {
       max_tokens: 4000,
       thinking: { type: "adaptive" },
       output_config: { effort: "medium" },
-      system: systemPromptScout(datos),
+      system: `${systemPromptScout(datos)}\n\n${contextoPrototipo()}`,
       messages: historial.map((m) => ({ role: m.role, content: m.content })),
     });
 
     if (message.stop_reason === "refusal") {
       return Response.json({
-        respuesta: respuestaFallback(ultimo.content, datos),
+        respuesta:
+        respuestaPrototipoFallback(ultimo.content) ??
+        respuestaFallback(ultimo.content, datos),
         fuente: "reglas",
         motivo: "La IA no pudo procesar la consulta; se respondió por reglas.",
         referencias,
@@ -170,7 +180,9 @@ export async function POST(request: Request) {
 
     if (!respuesta) {
       return Response.json({
-        respuesta: respuestaFallback(ultimo.content, datos),
+        respuesta:
+        respuestaPrototipoFallback(ultimo.content) ??
+        respuestaFallback(ultimo.content, datos),
         fuente: "reglas",
         motivo: "La IA devolvió una respuesta vacía; se respondió por reglas.",
         referencias,
@@ -181,7 +193,9 @@ export async function POST(request: Request) {
   } catch (e) {
     const motivo = e instanceof Error ? e.message : "Error desconocido";
     return Response.json({
-      respuesta: respuestaFallback(ultimo.content, datos),
+      respuesta:
+        respuestaPrototipoFallback(ultimo.content) ??
+        respuestaFallback(ultimo.content, datos),
       fuente: "reglas",
       motivo: `No se pudo usar la IA (${motivo}); se respondió por reglas.`,
       referencias,

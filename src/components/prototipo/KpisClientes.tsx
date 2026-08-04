@@ -8,6 +8,7 @@ import {
   clientePorId,
   type Evaluacion,
 } from "@/lib/prototipo/clientes";
+import { BannerMaqueta, useToastDemo } from "@/components/prototipo/ToastDemo";
 
 function tonoPuntaje(p: number): string {
   if (p >= 4) return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
@@ -74,6 +75,7 @@ function BloqueEvaluacion({
 
 export function KpisClientes() {
   const [id, setId] = useState(CLIENTES[0].id);
+  const { simular, toast } = useToastDemo();
   const cliente = clientePorId(id);
   const exp = EXPEDIENTES.find((e) => e.clienteId === id) ?? EXPEDIENTES[0];
 
@@ -83,15 +85,39 @@ export function KpisClientes() {
   const maxTendencia = 5;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">KPIs Clientes</h1>
-        <p className="text-sm text-tenue">
-          Evaluación 360 bidireccional y matriz de salud de cada cuenta.
-        </p>
+    <div className="documento-ejecutivo space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">KPIs Clientes</h1>
+          <p className="text-sm text-tenue">
+            Evaluación 360 bidireccional y matriz de salud de cada cuenta.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 print:hidden">
+          <button
+            type="button"
+            onClick={() =>
+              simular(
+                "Esta acción abrirá el formulario de evaluación del mes para el Squad y el cliente"
+              )
+            }
+            className="rounded-md border border-oxford/40 px-4 py-2 text-sm font-semibold text-oxford transition hover:bg-oxford-suave"
+          >
+            ✏️ Cargar evaluación del mes
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="rounded-md bg-oxford px-4 py-2 text-sm font-semibold text-white transition hover:bg-oxford-fuerte"
+          >
+            📄 Exportar Expediente
+          </button>
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <BannerMaqueta />
+
+      <div className="flex flex-wrap gap-1.5 print:hidden">
         {CLIENTES.map((c) => (
           <button
             key={c.id}
@@ -198,6 +224,8 @@ export function KpisClientes() {
           ))}
         </div>
       </section>
+
+      {toast}
     </div>
   );
 }

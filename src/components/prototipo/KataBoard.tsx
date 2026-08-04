@@ -13,6 +13,7 @@ import {
   type ExperimentoPdca,
 } from "@/lib/prototipo/clientes";
 import { Avatar } from "@/components/Avatar";
+import { BannerMaqueta, useToastDemo } from "@/components/prototipo/ToastDemo";
 
 const PESTANAS = [
   { id: "condicion", emoji: "📍", label: "Condición Objetivo" },
@@ -53,9 +54,26 @@ function Kpi({
   );
 }
 
-function CondicionObjetivoTab() {
+function CondicionObjetivoTab({
+  onSimular,
+}: {
+  onSimular: (texto?: string) => void;
+}) {
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={() =>
+          onSimular(
+            "Esta acción creará una condición objetivo nueva y la asociará al Squad del cliente"
+          )
+        }
+        className="w-full rounded-lg border border-dashed border-linea-fuerte px-3 py-2 text-xs font-medium text-tenue transition hover:border-oxford/50 hover:text-foreground"
+      >
+        ➕ Crear Condición Objetivo
+      </button>
+
+      <div className="grid gap-4 md:grid-cols-2">
       {CONDICIONES_OBJETIVO.map((co) => {
         const cliente = clientePorId(co.clienteId);
         const activos = EXPERIMENTOS.filter(
@@ -114,13 +132,26 @@ function CondicionObjetivoTab() {
           </article>
         );
       })}
+      </div>
     </div>
   );
 }
 
-function PdcaTab() {
+function PdcaTab({ onSimular }: { onSimular: (texto?: string) => void }) {
   return (
     <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() =>
+          onSimular(
+            "Esta acción creará un experimento PDCA y lo vinculará a la condición objetivo del cliente"
+          )
+        }
+        className="w-full rounded-lg border border-dashed border-linea-fuerte px-3 py-2 text-xs font-medium text-tenue transition hover:border-oxford/50 hover:text-foreground"
+      >
+        ➕ Crear Experimento
+      </button>
+
       {EXPERIMENTOS.map((e) => {
         const cliente = clientePorId(e.clienteId);
         return (
@@ -236,6 +267,7 @@ function RentabilidadTab() {
 
 export function KataBoard() {
   const [pestana, setPestana] = useState<Pestana>("condicion");
+  const { simular, toast } = useToastDemo();
   const c = consolidado();
 
   return (
@@ -247,6 +279,8 @@ export function KataBoard() {
           qué estamos probando para destrabarlo.
         </p>
       </div>
+
+      <BannerMaqueta />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Kpi label="Facturación total" valor={fmtPesos(c.facturacionTotal)} />
@@ -277,9 +311,11 @@ export function KataBoard() {
         ))}
       </div>
 
-      {pestana === "condicion" && <CondicionObjetivoTab />}
-      {pestana === "pdca" && <PdcaTab />}
+      {pestana === "condicion" && <CondicionObjetivoTab onSimular={simular} />}
+      {pestana === "pdca" && <PdcaTab onSimular={simular} />}
       {pestana === "rentabilidad" && <RentabilidadTab />}
+
+      {toast}
     </div>
   );
 }

@@ -541,6 +541,153 @@ export function clientePorId(id: string): Cliente {
   return CLIENTES.find((c) => c.id === id) ?? CLIENTES[0];
 }
 
+/**
+ * Los datos de maqueta en texto plano, para que Scout pueda responder sobre
+ * ellos durante la demo. Se marca explícitamente como prototipo para que la
+ * IA no los presente como si salieran del sistema.
+ */
+export function contextoPrototipo(): string {
+  const l: string[] = [];
+  const c = consolidado();
+
+  l.push("=== MÓDULO PERFORMANCE CLIENTES (PROTOTIPO) ===");
+  l.push(
+    "Atención: estos datos son de una maqueta en evaluación, no del sistema en producción. Si te preguntan por ellos, respondé con confianza pero aclarando una vez que son del prototipo de Performance Clientes."
+  );
+  l.push("");
+  l.push(
+    `Consolidado: facturación ${fmtPesos(c.facturacionTotal)}, utilidad bruta global ${c.margenPromedio}%, rendimiento medio ${fmtPesos(c.rendimientoMedio)}/h, ${c.squadsEnRiesgo} squads en riesgo.`
+  );
+
+  l.push("");
+  l.push("## Cartera de clientes");
+  for (const cl of CLIENTES) {
+    l.push(
+      `- ${cl.nombre} [${ESTADO_CLIENTE_LABELS[cl.estado]}] · ${cl.squad} · fee ${fmtPesos(cl.feeMensual)} · horas ${cl.horasConsumidas}/${cl.horasPresupuestadas} · margen ${cl.margenPct}% · rendimiento ${fmtPesos(cl.rendimientoHora)}/h`
+    );
+    l.push(
+      `  - Nivel 1 (objetivo de negocio): ${cl.nivel1.titulo} — ${cl.nivel1.valorActual} de ${cl.nivel1.meta} (${cl.nivel1.progreso}%)`
+    );
+    for (const m of cl.nivel2) {
+      l.push(
+        `  - Nivel 2 (funnel): ${m.titulo} — ${m.valorActual} contra meta ${m.meta}`
+      );
+    }
+    for (const m of cl.nivel3) {
+      l.push(
+        `  - Nivel 3 (táctico): ${m.titulo} — ${m.valorActual} contra meta ${m.meta}`
+      );
+    }
+  }
+
+  l.push("");
+  l.push("## Kata: condiciones objetivo");
+  for (const co of CONDICIONES_OBJETIVO) {
+    const cl = clientePorId(co.clienteId);
+    l.push(
+      `- ${cl.nombre}: "${co.titulo}" · métrica ${co.metrica} · ${co.progreso}% · responsable ${co.responsable}`
+    );
+    l.push(`  - Obstáculo actual: "${co.obstaculo}"`);
+    l.push(`  - Siguiente paso: ${co.siguientePaso}`);
+  }
+
+  l.push("");
+  l.push("## Kata: experimentos PDCA");
+  for (const e of EXPERIMENTOS) {
+    const cl = clientePorId(e.clienteId);
+    l.push(
+      `- [${ESTADO_EXPERIMENTO_LABELS[e.estado]}] ${cl.nombre}: ${e.hipotesis}${e.aprendizaje ? ` — Aprendizaje: ${e.aprendizaje}` : ""}`
+    );
+  }
+
+  l.push("");
+  l.push("## KPIs de clientes (evaluación 360, escala 1 a 5)");
+  for (const exp of EXPEDIENTES) {
+    const cl = clientePorId(exp.clienteId);
+    const prom = (evs: Evaluacion[]) =>
+      Math.round((evs.reduce((a, e) => a + e.puntaje, 0) / evs.length) * 10) / 10;
+    l.push(
+      `- ${cl.nombre}: cliente→Oxford ${prom(exp.clienteHaciaOxford)}, Oxford→cliente ${prom(exp.oxfordHaciaCliente)}, objetivos comerciales ${prom(exp.objetivosComerciales)}`
+    );
+    l.push(
+      `  - Tendencia: ${exp.tendencia.map((t) => `${t.mes} ${t.puntaje}`).join(" → ")}`
+    );
+    const flojos = exp.clienteHaciaOxford
+      .concat(exp.oxfordHaciaCliente)
+      .filter((e) => e.puntaje <= 2);
+    if (flojos.length > 0) {
+      l.push(
+        `  - Puntos flojos: ${flojos.map((f) => `${f.criterio} (${f.puntaje})`).join(", ")}`
+      );
+    }
+  }
+
+  return l.join("\n");
+}
+
+/**
+ * Respuesta por reglas para preguntas sobre un cliente del prototipo. Si la
+ * IA no está disponible en la demo, esto evita que Scout diga que no sabe
+ * nada de Panther justo cuando lo estás mostrando.
+ */
+export function respuestaPrototipoFallback(pregunta: string): string | null {
+  const q = pregunta.toLowerCase();
+  const cl = CLIENTES.find((c) =>
+    q.includes(c.nombre.split(" ")[0].toLowerCase())
+  );
+  if (!cl) return null;
+
+  const co = CONDICIONES_OBJETIVO.find((x) => x.clienteId === cl.id);
+  const exp = EXPEDIENTES.find((x) => x.clienteId === cl.id);
+  const activos = EXPERIMENTOS.filter(
+    (e) => e.clienteId === cl.id && e.estado !== "cerrado"
+  );
+
+  const l: string[] = [];
+  l.push(`## ${cl.nombre}`);
+  l.push("");
+  l.push(
+    `- **Estado:** ${ESTADO_CLIENTE_LABELS[cl.estado]} · ${cl.squad} · fee ${fmtPesos(cl.feeMensual)}`
+  );
+  l.push(
+    `- **Rentabilidad:** margen ${cl.margenPct}% · ${fmtPesos(cl.rendimientoHora)}/h · horas ${cl.horasConsumidas} de ${cl.horasPresupuestadas}`
+  );
+  l.push(
+    `- **Nivel 1:** ${cl.nivel1.titulo} — ${cl.nivel1.valorActual} de ${cl.nivel1.meta} (${cl.nivel1.progreso}%)`
+  );
+
+  if (co) {
+    l.push("");
+    l.push("### Condición objetivo");
+    l.push(`- ${co.titulo} · ${co.metrica} · ${co.progreso}%`);
+    l.push(`- ⚠ Obstáculo: "${co.obstaculo}"`);
+    l.push(`- Siguiente paso: ${co.siguientePaso} (${co.responsable})`);
+  }
+
+  if (activos.length > 0) {
+    l.push("");
+    l.push(`### ${activos.length} experimento(s) abiertos`);
+    for (const e of activos) l.push(`- ${e.hipotesis}`);
+  }
+
+  if (exp) {
+    const prom = (evs: Evaluacion[]) =>
+      Math.round((evs.reduce((a, e) => a + e.puntaje, 0) / evs.length) * 10) / 10;
+    l.push("");
+    l.push("### Evaluación 360");
+    l.push(
+      `- Cliente → Oxford: ${prom(exp.clienteHaciaOxford)} · Oxford → Cliente: ${prom(exp.oxfordHaciaCliente)}`
+    );
+    l.push(
+      `- Tendencia: ${exp.tendencia.map((t) => `${t.mes} ${t.puntaje}`).join(" → ")}`
+    );
+  }
+
+  l.push("");
+  l.push("_Datos del prototipo de Performance Clientes, todavía en maqueta._");
+  return l.join("\n");
+}
+
 export const fmtPesos = (n: number) =>
   new Intl.NumberFormat("es-AR", {
     style: "currency",

@@ -9,6 +9,7 @@ import {
   type Cliente,
   type MetricaNivel,
 } from "@/lib/prototipo/clientes";
+import { BannerMaqueta, useToastDemo } from "@/components/prototipo/ToastDemo";
 
 const TONO_ESTADO: Record<Cliente["estado"], string> = {
   activo: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
@@ -22,7 +23,15 @@ function colorBarra(progreso: number): string {
   return "bg-red-500";
 }
 
-function FilaMetrica({ m, nivel }: { m: MetricaNivel; nivel: 1 | 2 | 3 }) {
+function FilaMetrica({
+  m,
+  nivel,
+  onSimular,
+}: {
+  m: MetricaNivel;
+  nivel: 1 | 2 | 3;
+  onSimular: (texto?: string) => void;
+}) {
   return (
     <div className="space-y-1.5 rounded-lg border border-linea p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -51,7 +60,7 @@ function FilaMetrica({ m, nivel }: { m: MetricaNivel; nivel: 1 | 2 | 3 }) {
 
       {m.detalle && <p className="text-xs text-tenue">{m.detalle}</p>}
 
-      <div className="flex flex-wrap items-center gap-2 pt-0.5">
+      <div className="flex flex-wrap items-center gap-2 pt-0.5 print:hidden">
         {m.krVinculado ? (
           <span className="rounded-full bg-oxford-suave px-2 py-0.5 text-[11px] font-medium text-oxford">
             🔗 {m.krVinculado}
@@ -59,6 +68,7 @@ function FilaMetrica({ m, nivel }: { m: MetricaNivel; nivel: 1 | 2 | 3 }) {
         ) : (
           <button
             type="button"
+            onClick={() => onSimular()}
             className="rounded-full border border-dashed border-linea-fuerte px-2.5 py-0.5 text-[11px] font-medium text-tenue transition hover:border-oxford/50 hover:text-foreground"
           >
             ➕ Vincular a KR del Trimestre
@@ -75,24 +85,44 @@ function Nivel({
   titulo,
   bajada,
   metricas,
+  onSimular,
 }: {
   numero: 1 | 2 | 3;
   emoji: string;
   titulo: string;
   bajada: string;
   metricas: MetricaNivel[];
+  onSimular: (texto?: string) => void;
 }) {
   return (
     <section className="space-y-2">
-      <div>
-        <h3 className="text-sm font-semibold">
-          <span aria-hidden>{emoji}</span> Nivel {numero} · {titulo}
-        </h3>
-        <p className="text-xs text-tenue">{bajada}</p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold">
+            <span aria-hidden>{emoji}</span> Nivel {numero} · {titulo}
+          </h3>
+          <p className="text-xs text-tenue">{bajada}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            onSimular(
+              `Esta acción agregará una métrica nueva al Nivel ${numero} de la ficha del cliente`
+            )
+          }
+          className="rounded-full border border-dashed border-linea-fuerte px-2.5 py-1 text-[11px] font-medium text-tenue transition hover:border-oxford/50 hover:text-foreground print:hidden"
+        >
+          ➕ Agregar métrica
+        </button>
       </div>
       <div className="grid gap-2 lg:grid-cols-2">
         {metricas.map((m) => (
-          <FilaMetrica key={m.titulo} m={m} nivel={numero} />
+          <FilaMetrica
+            key={m.titulo}
+            m={m}
+            nivel={numero}
+            onSimular={onSimular}
+          />
         ))}
       </div>
     </section>
@@ -101,22 +131,34 @@ function Nivel({
 
 export function CarteraClientes() {
   const [id, setId] = useState(CLIENTES[0].id);
+  const { simular, toast } = useToastDemo();
   const cliente = CLIENTES.find((c) => c.id === id) ?? CLIENTES[0];
   const pctHoras = Math.round(
     (cliente.horasConsumidas / cliente.horasPresupuestadas) * 100
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Cartera de Clientes</h1>
-        <p className="text-sm text-tenue">
-          Ficha estratégica de cada cuenta con la estructura estandarizada de
-          tres niveles.
-        </p>
+    <div className="documento-ejecutivo space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Cartera de Clientes</h1>
+          <p className="text-sm text-tenue">
+            Ficha estratégica de cada cuenta con la estructura estandarizada de
+            tres niveles.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="rounded-md bg-oxford px-4 py-2 text-sm font-semibold text-white transition hover:bg-oxford-fuerte print:hidden"
+        >
+          📄 Exportar Expediente
+        </button>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <BannerMaqueta />
+
+      <div className="flex flex-wrap gap-1.5 print:hidden">
         {CLIENTES.map((c) => (
           <button
             key={c.id}
@@ -217,6 +259,7 @@ export function CarteraClientes() {
         titulo="Objetivo de Negocio"
         bajada="La métrica principal del contrato. Es la que justifica el fee."
         metricas={[cliente.nivel1]}
+        onSimular={simular}
       />
 
       <Nivel
@@ -225,6 +268,7 @@ export function CarteraClientes() {
         titulo="Salud del Funnel"
         bajada="Indicadores de conversión y de medios que explican el Nivel 1."
         metricas={cliente.nivel2}
+        onSimular={simular}
       />
 
       <Nivel
@@ -233,7 +277,10 @@ export function CarteraClientes() {
         titulo="Micro-KPIs Tácticos"
         bajada="Lo que el POD mueve todas las semanas."
         metricas={cliente.nivel3}
+        onSimular={simular}
       />
+
+      {toast}
     </div>
   );
 }
