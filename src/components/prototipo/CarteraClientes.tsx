@@ -8,14 +8,113 @@ import {
   fmtPesos,
   type Cliente,
   type MetricaNivel,
+  type Squad,
 } from "@/lib/prototipo/clientes";
 import { BannerMaqueta, useToastDemo } from "@/components/prototipo/ToastDemo";
+import { Avatar } from "@/components/Avatar";
 
 const TONO_ESTADO: Record<Cliente["estado"], string> = {
   activo: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   en_riesgo: "bg-red-500/15 text-red-700 dark:text-red-300",
   onboarding: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
 };
+
+/** Ficha destacada para PO y Chapter Leads. */
+function FichaLider({
+  nombre,
+  rol,
+  destacado = false,
+}: {
+  nombre: string;
+  rol: string;
+  destacado?: boolean;
+}) {
+  return (
+    <div
+      className={clsx(
+        "flex items-center gap-2 rounded-lg border px-2.5 py-2",
+        destacado ? "border-oxford/40 bg-oxford-suave" : "border-linea"
+      )}
+    >
+      <Avatar nombre={nombre} conNombre={false} size="md" />
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold">{nombre}</span>
+        <span
+          className={clsx(
+            "block truncate text-[11px]",
+            destacado ? "font-medium text-oxford" : "text-tenue"
+          )}
+        >
+          {rol}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function ComposicionSquad({ squad }: { squad: Squad }) {
+  return (
+    <section className="space-y-4 rounded-xl border border-linea bg-panel p-4">
+      <div>
+        <h3 className="text-sm font-semibold">
+          <span aria-hidden>👥</span> Composición del Squad & Ritos
+        </h3>
+        <p className="text-xs text-tenue">
+          Quién responde por la cuenta y con qué ritmo se juntan.
+        </p>
+      </div>
+
+      <div>
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-tenue">
+          Liderazgo
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <FichaLider nombre={squad.po} rol="PO / Client Partner" destacado />
+          {squad.chapterLeads.map((m) => (
+            <FichaLider
+              key={`${m.nombre}-${m.rol}`}
+              nombre={m.nombre}
+              rol={`Chapter Lead · ${m.rol}`}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-tenue">
+          Equipo ejecutor ({squad.ejecutores.length})
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {squad.ejecutores.map((m) => (
+            <span
+              key={`${m.nombre}-${m.rol}`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-linea px-2.5 py-1 text-xs"
+            >
+              <span className="font-medium">{m.nombre}</span>
+              <span className="text-tenue">· {m.rol}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-tenue">
+          Ceremonias
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {squad.ceremonias.map((c) => (
+            <span
+              key={c}
+              className="rounded-full bg-oxford-suave px-2.5 py-1 text-xs font-medium text-oxford"
+            >
+              🔁 {c}
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function colorBarra(progreso: number): string {
   if (progreso >= 85) return "bg-emerald-500";
@@ -131,8 +230,23 @@ function Nivel({
 
 export function CarteraClientes() {
   const [id, setId] = useState(CLIENTES[0].id);
+  const [poFiltro, setPoFiltro] = useState("Todos");
   const { simular, toast } = useToastDemo();
-  const cliente = CLIENTES.find((c) => c.id === id) ?? CLIENTES[0];
+
+  const pos = [
+    "Todos",
+    ...new Set(
+      CLIENTES.map((c) => c.squadDetalle?.po).filter((p): p is string => Boolean(p))
+    ),
+  ];
+  const visibles =
+    poFiltro === "Todos"
+      ? CLIENTES
+      : CLIENTES.filter((c) => c.squadDetalle?.po === poFiltro);
+
+  // Si el filtro deja fuera al cliente abierto, se muestra el primero visible.
+  const cliente =
+    visibles.find((c) => c.id === id) ?? visibles[0] ?? CLIENTES[0];
   const pctHoras = Math.round(
     (cliente.horasConsumidas / cliente.horasPresupuestadas) * 100
   );
@@ -158,15 +272,30 @@ export function CarteraClientes() {
 
       <BannerMaqueta />
 
-      <div className="flex flex-wrap gap-1.5 print:hidden">
-        {CLIENTES.map((c) => (
+      <div className="flex flex-wrap items-center gap-2 print:hidden">
+        <label className="flex items-center gap-1.5 text-xs text-tenue">
+          Squad / PO:
+          <select
+            value={poFiltro}
+            onChange={(e) => setPoFiltro(e.target.value)}
+            className="rounded-full border border-linea bg-transparent px-3 py-1.5 text-xs"
+          >
+            {pos.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {visibles.map((c) => (
           <button
             key={c.id}
             type="button"
             onClick={() => setId(c.id)}
             className={clsx(
               "rounded-full border px-3 py-1.5 text-xs font-medium transition",
-              c.id === id
+              c.id === cliente.id
                 ? "border-oxford bg-oxford text-white"
                 : "border-linea text-tenue hover:border-oxford/50 hover:text-foreground"
             )}
@@ -192,9 +321,23 @@ export function CarteraClientes() {
             </div>
             <p className="text-sm text-tenue">{cliente.squad}</p>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-tenue">Fee mensual</p>
-            <p className="text-lg font-semibold">{fmtPesos(cliente.feeMensual)}</p>
+          <div className="flex flex-col items-end gap-2">
+            <div className="text-right">
+              <p className="text-xs text-tenue">Fee mensual</p>
+              <p className="text-lg font-semibold">
+                {fmtPesos(cliente.feeMensual)}
+              </p>
+            </div>
+            {cliente.lookerUrl && (
+              <a
+                href={cliente.lookerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md bg-oxford px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-oxford-fuerte print:hidden"
+              >
+                📊 Ver Reporte Live en Looker Studio ↗
+              </a>
+            )}
           </div>
         </div>
 
@@ -252,6 +395,8 @@ export function CarteraClientes() {
           </div>
         </div>
       </section>
+
+      {cliente.squadDetalle && <ComposicionSquad squad={cliente.squadDetalle} />}
 
       <Nivel
         numero={1}

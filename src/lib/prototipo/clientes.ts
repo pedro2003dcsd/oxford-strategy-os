@@ -24,12 +24,29 @@ export interface MetricaNivel {
   krVinculado?: string;
 }
 
+export interface MiembroSquad {
+  nombre: string;
+  rol: string;
+}
+
+/** Composición real del squad y su ritmo de ceremonias. */
+export interface Squad {
+  po: string;
+  chapterLeads: MiembroSquad[];
+  ejecutores: MiembroSquad[];
+  ceremonias: string[];
+}
+
 export interface Cliente {
   id: string;
   nombre: string;
   estado: EstadoCliente;
   feeMensual: number;
+  /** Etiqueta corta para las tarjetas. La composición completa va en `squadDetalle`. */
   squad: string;
+  squadDetalle?: Squad;
+  /** Tablero del cliente en Looker Studio, si tiene uno publicado. */
+  lookerUrl?: string;
   /** Espejo de SOLOP, cargado a mano en la maqueta. */
   horasConsumidas: number;
   horasPresupuestadas: number;
@@ -49,7 +66,28 @@ export const CLIENTES: Cliente[] = [
     nombre: "Batistella (Bati Off)",
     estado: "en_riesgo",
     feeMensual: 1800000,
-    squad: "POD Digital · Ayelén Bruno",
+    squad: "PO Leticia · POD Digital",
+    squadDetalle: {
+      po: "Leticia",
+      chapterLeads: [
+        { nombre: "Mateo", rol: "Arte" },
+        { nombre: "Ayelén", rol: "Digital" },
+        { nombre: "Seba", rol: "Consultoría" },
+        { nombre: "Cristóbal", rol: "Cliente" },
+      ],
+      ejecutores: [
+        { nombre: "Nico", rol: "Diseño" },
+        { nombre: "Maca", rol: "Redacción" },
+        { nombre: "Pepe", rol: "Animación / Motion" },
+        { nombre: "Bruno", rol: "Diseño" },
+        { nombre: "OMG / Maribel", rol: "Pauta Digital" },
+        { nombre: "Celina", rol: "Mailing" },
+        { nombre: "Franco B.", rol: "Coordinación" },
+        { nombre: "Danilo / Dani T.", rol: "P&S" },
+        { nombre: "Laura / Gon", rol: "Medios" },
+      ],
+      ceremonias: ["Weekly Quincenal", "Review Quincenal", "Retro Mensual"],
+    },
     horasConsumidas: 88,
     horasPresupuestadas: 100,
     margenPct: 54,
@@ -98,10 +136,29 @@ export const CLIENTES: Cliente[] = [
   },
   {
     id: "eseka",
-    nombre: "Eseka",
+    nombre: "Eseka (Cocot & Dufour)",
     estado: "activo",
     feeMensual: 1450000,
-    squad: "POD Comercial · Cristóbal Dávalos",
+    squad: "PO Agostina · POD Comercial",
+    lookerUrl:
+      "https://lookerstudio.google.com/u/0/reporting/67beab94-6566-4c66-8c26-f72d8de2314c/page/p_66o0rk0itd",
+    squadDetalle: {
+      po: "Agostina",
+      chapterLeads: [
+        { nombre: "Mateo", rol: "Arte" },
+        { nombre: "Ayelén", rol: "Digital" },
+        { nombre: "Seba", rol: "Consultoría" },
+        { nombre: "Cristóbal", rol: "Cliente" },
+      ],
+      ejecutores: [
+        { nombre: "Primo", rol: "Redacción" },
+        { nombre: "Meli", rol: "CM / Influencers" },
+        { nombre: "OMG", rol: "Pauta" },
+        { nombre: "Celi", rol: "Mailing" },
+        { nombre: "Igna", rol: "Ecommerce" },
+      ],
+      ceremonias: ["Weekly Quincenal", "Review Quincenal", "Retro Bimensual"],
+    },
     horasConsumidas: 62,
     horasPresupuestadas: 110,
     margenPct: 71,
@@ -154,7 +211,25 @@ export const CLIENTES: Cliente[] = [
     nombre: "Sipssa",
     estado: "activo",
     feeMensual: 980000,
-    squad: "POD Digital · Ayelén Bruno",
+    squad: "PO Maxi · POD Digital",
+    squadDetalle: {
+      po: "Maxi",
+      chapterLeads: [
+        { nombre: "Mateo", rol: "Arte" },
+        { nombre: "Ayelén", rol: "Digital" },
+        { nombre: "Seba", rol: "Consultoría" },
+        { nombre: "Cristóbal", rol: "Cliente" },
+      ],
+      ejecutores: [
+        { nombre: "Nico", rol: "Diseño" },
+        { nombre: "Maca", rol: "Redacción" },
+        { nombre: "Pepe", rol: "Motion" },
+        { nombre: "Javi", rol: "Diseño" },
+        { nombre: "Advicers Dani / Fran", rol: "Pauta & CRM" },
+        { nombre: "Dani T. / Laura", rol: "P&S / BTL" },
+      ],
+      ceremonias: ["Weekly Quincenal", "Review Quincenal", "Retro Mensual"],
+    },
     horasConsumidas: 41,
     horasPresupuestadas: 70,
     margenPct: 66,
@@ -179,7 +254,26 @@ export const CLIENTES: Cliente[] = [
     nombre: "Blangino",
     estado: "onboarding",
     feeMensual: 1200000,
-    squad: "POD Arte · Matías Merlo",
+    squad: "PO Agostina · POD Arte",
+    squadDetalle: {
+      po: "Agostina",
+      chapterLeads: [
+        { nombre: "Mateo", rol: "Arte" },
+        { nombre: "Ayelén", rol: "Digital" },
+        { nombre: "Seba", rol: "Consultoría" },
+        { nombre: "Cristóbal", rol: "Cliente" },
+      ],
+      ejecutores: [
+        { nombre: "Eli Druetta", rol: "Diseño" },
+        { nombre: "Mati Mazzoni", rol: "Redacción" },
+        { nombre: "Pepe", rol: "Animación" },
+        { nombre: "Advicers", rol: "Pauta" },
+        { nombre: "Celina", rol: "Email Mkt" },
+        { nombre: "Dani T. / Danilo", rol: "P&S" },
+        { nombre: "Javi", rol: "Diseño" },
+      ],
+      ceremonias: ["Weekly Quincenal", "Review Quincenal", "Retro Mensual"],
+    },
     horasConsumidas: 12,
     horasPresupuestadas: 80,
     margenPct: 74,
@@ -204,7 +298,24 @@ export const CLIENTES: Cliente[] = [
     nombre: "Panther",
     estado: "en_riesgo",
     feeMensual: 760000,
-    squad: "POD Digital · Ayelén Bruno",
+    squad: "PO Gon / Leti · POD Digital",
+    squadDetalle: {
+      po: "Gon / Leti",
+      chapterLeads: [
+        { nombre: "Mati", rol: "Arte" },
+        { nombre: "Juli", rol: "Digital" },
+        { nombre: "Anto", rol: "Cliente / Ej. Cuentas" },
+      ],
+      ejecutores: [
+        { nombre: "Nico", rol: "Diseño" },
+        { nombre: "Maca", rol: "Redacción" },
+        { nombre: "Pepe", rol: "Animación" },
+        { nombre: "Juli", rol: "P&S" },
+        { nombre: "OMG", rol: "Pauta" },
+        { nombre: "Meli", rol: "CM" },
+      ],
+      ceremonias: ["Weekly", "Review Chapter", "Retro cada 2-3 meses"],
+    },
     horasConsumidas: 118,
     horasPresupuestadas: 90,
     margenPct: 5,
@@ -350,6 +461,24 @@ export interface Evaluacion {
   puntaje: number; // 1 a 5
 }
 
+/** Bloque de la matriz de valoración, con su subtotal y quién lo califica. */
+export interface CategoriaValoracion {
+  titulo: string;
+  fuente: string;
+  items: Evaluacion[];
+  subtotal: number;
+  etiqueta?: string;
+}
+
+/** KPI de calidad de entregables, con semáforo contra la meta. */
+export interface KpiCalidad {
+  titulo: string;
+  meta: string;
+  actual: string;
+  estado: "verde" | "amarillo" | "rojo";
+  nota?: string;
+}
+
 export interface ExpedienteKpi {
   clienteId: string;
   clienteHaciaOxford: Evaluacion[];
@@ -357,6 +486,9 @@ export interface ExpedienteKpi {
   objetivosComerciales: Evaluacion[];
   /** Últimos 3 meses, del más viejo al más nuevo. */
   tendencia: { mes: string; puntaje: number }[];
+  /** Matriz completa del Tablero de Seguimiento, si la cuenta ya la tiene. */
+  matriz?: CategoriaValoracion[];
+  kpisCalidad?: KpiCalidad[];
 }
 
 export const EXPEDIENTES: ExpedienteKpi[] = [
@@ -406,10 +538,66 @@ export const EXPEDIENTES: ExpedienteKpi[] = [
       { criterio: "Performance digital", puntaje: 4 },
       { criterio: "Presencia de marca", puntaje: 5 },
     ],
+    // Tendencia del Tablero de Seguimiento real de la cuenta.
     tendencia: [
-      { mes: "Mayo", puntaje: 3.8 },
-      { mes: "Junio", puntaje: 4.1 },
-      { mes: "Julio", puntaje: 4.3 },
+      { mes: "Marzo", puntaje: 2.0 },
+      { mes: "Abril", puntaje: 1.5 },
+      { mes: "Mayo", puntaje: 1.9 },
+    ],
+    matriz: [
+      {
+        titulo: "Objetivos Comerciales",
+        fuente: "Responsabilidad del cliente",
+        subtotal: 1.9,
+        items: [
+          { criterio: "Impacto en ventas offline", puntaje: 3 },
+          { criterio: "Mix de productos de terceros", puntaje: 1 },
+          { criterio: "Crecimiento de base de datos", puntaje: 2 },
+        ],
+      },
+      {
+        titulo: "Performance Digital",
+        fuente: "Responsabilidad de la agencia",
+        subtotal: 4.2,
+        etiqueta: "Alta Performance",
+        items: [
+          { criterio: "Alcance digital", puntaje: 4 },
+          { criterio: "Crecimiento de comunidad", puntaje: 5 },
+          { criterio: "CR de e-commerce", puntaje: 5 },
+        ],
+      },
+      {
+        titulo: "Relacionamiento",
+        fuente: "Cliente ↔ Agencia",
+        subtotal: 3.8,
+        items: [
+          { criterio: "Entrega de información", puntaje: 4 },
+          { criterio: "Calidad del feedback", puntaje: 3 },
+          { criterio: "Tiempos de respuesta", puntaje: 3.6 },
+        ],
+      },
+    ],
+    kpisCalidad: [
+      {
+        titulo: "Aprobación en 1ª presentación",
+        meta: "> 70%",
+        actual: "78%",
+        estado: "verde",
+        nota: "Mide re-trabajo y rebote de piezas.",
+      },
+      {
+        titulo: "Consistencia de marca",
+        meta: "> 85%",
+        actual: "90%",
+        estado: "verde",
+        nota: "Evaluación semáforo sobre las piezas entregadas.",
+      },
+      {
+        titulo: "CTR Meta / Google Ads",
+        meta: "3%",
+        actual: "3,2%",
+        estado: "verde",
+      },
     ],
   },
   {
@@ -578,6 +766,20 @@ export function contextoPrototipo(): string {
         `  - Nivel 3 (táctico): ${m.titulo} — ${m.valorActual} contra meta ${m.meta}`
       );
     }
+    if (cl.squadDetalle) {
+      const s = cl.squadDetalle;
+      l.push(`  - PO / Client Partner: ${s.po}`);
+      l.push(
+        `  - Chapter Leads: ${s.chapterLeads.map((m) => `${m.nombre} (${m.rol})`).join(", ")}`
+      );
+      l.push(
+        `  - Equipo ejecutor: ${s.ejecutores.map((m) => `${m.nombre} (${m.rol})`).join(", ")}`
+      );
+      l.push(`  - Ceremonias: ${s.ceremonias.join(", ")}`);
+    }
+    if (cl.lookerUrl) {
+      l.push(`  - Tiene tablero en vivo en Looker Studio: ${cl.lookerUrl}`);
+    }
   }
 
   l.push("");
@@ -620,6 +822,20 @@ export function contextoPrototipo(): string {
         `  - Puntos flojos: ${flojos.map((f) => `${f.criterio} (${f.puntaje})`).join(", ")}`
       );
     }
+    if (exp.matriz) {
+      l.push("  - Matriz de valoración 1 a 5:");
+      for (const cat of exp.matriz) {
+        l.push(
+          `    - ${cat.titulo} (${cat.fuente}): subtotal ${cat.subtotal}${cat.etiqueta ? ` [${cat.etiqueta}]` : ""} · ${cat.items.map((i) => `${i.criterio} ${i.puntaje}/5`).join(", ")}`
+        );
+      }
+    }
+    if (exp.kpisCalidad) {
+      l.push("  - KPIs de calidad y entregables:");
+      for (const k of exp.kpisCalidad) {
+        l.push(`    - ${k.titulo}: ${k.actual} contra meta ${k.meta} (${k.estado})`);
+      }
+    }
   }
 
   return l.join("\n");
@@ -649,6 +865,11 @@ export function respuestaPrototipoFallback(pregunta: string): string | null {
   l.push(
     `- **Estado:** ${ESTADO_CLIENTE_LABELS[cl.estado]} · ${cl.squad} · fee ${fmtPesos(cl.feeMensual)}`
   );
+  if (cl.squadDetalle) {
+    l.push(
+      `- **Squad:** PO ${cl.squadDetalle.po} · ${cl.squadDetalle.ejecutores.length} ejecutores · ${cl.squadDetalle.ceremonias.join(", ")}`
+    );
+  }
   l.push(
     `- **Rentabilidad:** margen ${cl.margenPct}% · ${fmtPesos(cl.rendimientoHora)}/h · horas ${cl.horasConsumidas} de ${cl.horasPresupuestadas}`
   );

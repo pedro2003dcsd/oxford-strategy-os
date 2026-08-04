@@ -6,7 +6,9 @@ import {
   CLIENTES,
   EXPEDIENTES,
   clientePorId,
+  type CategoriaValoracion,
   type Evaluacion,
+  type KpiCalidad,
 } from "@/lib/prototipo/clientes";
 import { BannerMaqueta, useToastDemo } from "@/components/prototipo/ToastDemo";
 
@@ -69,6 +71,132 @@ function BloqueEvaluacion({
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+/** Matriz de valoración por categoría, con el subtotal de cada bloque. */
+function MatrizValoracion({ matriz }: { matriz: CategoriaValoracion[] }) {
+  const global =
+    Math.round(
+      (matriz.reduce((a, c) => a + c.subtotal, 0) / matriz.length) * 10
+    ) / 10;
+
+  return (
+    <section className="space-y-3 rounded-xl border border-linea bg-panel p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold">
+            Matriz de Valoración · escala de impacto 1 a 5
+          </h3>
+          <p className="text-xs text-tenue">
+            Separa lo que depende del cliente de lo que depende de la agencia.
+          </p>
+        </div>
+        <span
+          className={clsx(
+            "rounded-full px-2.5 py-1 text-sm font-semibold",
+            tonoPuntaje(global)
+          )}
+        >
+          {global} global
+        </span>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-3">
+        {matriz.map((cat) => (
+          <div
+            key={cat.titulo}
+            className={clsx(
+              "space-y-2 rounded-lg border p-3",
+              cat.subtotal >= 4
+                ? "border-emerald-500/40"
+                : cat.subtotal >= 3
+                  ? "border-amber-500/40"
+                  : "border-red-500/40"
+            )}
+          >
+            <div>
+              <p className="text-sm font-semibold">{cat.titulo}</p>
+              <p className="text-[11px] text-tenue">{cat.fuente}</p>
+            </div>
+
+            <ul className="space-y-1">
+              {cat.items.map((i) => (
+                <li
+                  key={i.criterio}
+                  className="flex items-center justify-between gap-2 text-xs"
+                >
+                  <span className="min-w-0 text-tenue">{i.criterio}</span>
+                  <span
+                    className={clsx(
+                      "shrink-0 rounded-full px-1.5 py-0.5 font-semibold",
+                      tonoPuntaje(i.puntaje)
+                    )}
+                  >
+                    {i.puntaje}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="flex items-center justify-between gap-2 border-t border-linea pt-2">
+              <span className="text-xs font-medium">Subtotal</span>
+              <span className="flex items-center gap-1.5">
+                {cat.etiqueta && (
+                  <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                    {cat.etiqueta}
+                  </span>
+                )}
+                <span
+                  className={clsx(
+                    "rounded-full px-2 py-0.5 text-sm font-semibold",
+                    tonoPuntaje(cat.subtotal)
+                  )}
+                >
+                  {cat.subtotal}
+                </span>
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function KpisDeCalidad({ kpis }: { kpis: KpiCalidad[] }) {
+  return (
+    <section className="space-y-3 rounded-xl border border-linea bg-panel p-4">
+      <div>
+        <h3 className="text-sm font-semibold">KPIs de calidad y entregables</h3>
+        <p className="text-xs text-tenue">
+          Miden el trabajo de la agencia, no el resultado del negocio.
+        </p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {kpis.map((k) => (
+          <div
+            key={k.titulo}
+            className={clsx(
+              "space-y-1 rounded-lg border p-3",
+              k.estado === "verde"
+                ? "border-emerald-500/40 bg-emerald-500/5"
+                : k.estado === "amarillo"
+                  ? "border-amber-500/40 bg-amber-500/5"
+                  : "border-red-500/40 bg-red-500/5"
+            )}
+          >
+            <p className="text-xs font-medium">{k.titulo}</p>
+            <p className="text-xl font-semibold">
+              {k.estado === "verde" ? "🟢" : k.estado === "amarillo" ? "🟡" : "🔴"}{" "}
+              {k.actual}
+            </p>
+            <p className="text-[11px] text-tenue">Meta {k.meta}</p>
+            {k.nota && <p className="text-[11px] text-tenue">{k.nota}</p>}
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -139,6 +267,9 @@ export function KpisClientes() {
         Expediente de <span className="font-semibold text-foreground">{cliente.nombre}</span>{" "}
         · {cliente.squad}
       </p>
+
+      {exp.matriz && <MatrizValoracion matriz={exp.matriz} />}
+      {exp.kpisCalidad && <KpisDeCalidad kpis={exp.kpisCalidad} />}
 
       <div className="grid gap-3 lg:grid-cols-2">
         <BloqueEvaluacion
