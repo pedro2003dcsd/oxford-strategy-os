@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { registrarCambios } from "@/lib/historial-server";
+import type { Area } from "@/lib/types";
 
 export type FormActionState = { error?: string } | undefined;
 
@@ -82,6 +84,16 @@ export async function createOkrTrimestral(
     return { error: "Completá título, área, trimestre y responsable." };
   }
 
+  const esColaborativo = formData.get("es_colaborativo") === "on";
+  const areas = areasInvolucradas(formData, esColaborativo);
+
+  if (esColaborativo && areas.length < 2) {
+    return {
+      error:
+        "Un OKR colaborativo necesita al menos dos áreas involucradas. Si es de una sola área, destildá la casilla.",
+    };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.from("okr_trimestral").insert({
     // okr_anual_id es opcional a propósito: un área puede alinear su OKR
@@ -92,11 +104,116 @@ export async function createOkrTrimestral(
     trimestre,
     anio: Number(formData.get("anio")) || 2026,
     responsable,
+    es_colaborativo: esColaborativo,
+    areas_involucradas: areas,
   });
   if (error) return { error: error.message };
 
   revalidatePath("/okrs");
+  revalidatePath("/okrs/colaborativos");
   return undefined;
+}
+
+/** Las áreas involucradas viajan como checkboxes repetidos con el mismo
+ * name. Un OKR no colaborativo no guarda ninguna: si después se destilda la
+ * casilla, la lista vieja quedaría colgada y los filtros la seguirían
+ * levantando. */
+function areasInvolucradas(formData: FormData, esColaborativo: boolean): Area[] {
+  if (!esColaborativo) return [];
+  return formData
+    .getAll("areas_involucradas")
+    .map((a) => String(a).trim())
+    .filter(Boolean) as Area[];
+}
+
+export async function updateOkrTrimestral(
+  okrId: string,
+  _prevState: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const titulo = str(formData, "titulo");
+  const area = str(formData, "area");
+  const trimestre = str(formData, "trimestre");
+  const responsable = str(formData, "responsable");
+
+  if (!titulo || !area || !trimestre || !responsable) {
+    return { error: "Completá título, área, trimestre y responsable." };
+  }
+
+  const esColaborativo = formData.get("es_colaborativo") === "on";
+  const areas = areasInvolucradas(formData, esColaborativo);
+
+  if (esColaborativo && areas.length < 2) {
+    return {
+      error:
+        "Un OKR colaborativo necesita al menos dos áreas involucradas. Si es de una sola área, destildá la casilla.",
+    };
+  }
+
+  const supabase = await createClient();
+
+  const { data: anterior } = await supabase
+    .from("okr_trimestral")
+    .select("*")
+    .eq("id", okrId)
+    .maybeSingle();
+
+  const campos = {
+    okr_anual_id: optionalStr(formData, "okr_anual_id"),
+    area,
+    titulo,
+    trimestre,
+    anio: Number(formData.get("anio")) || 2026,
+    responsable,
+    es_colaborativo: esColaborativo,
+    areas_involucradas: areas,
+  };
+
+  const { error } = await supabase
+    .from("okr_trimestral")
+    .update(campos)
+    .eq("id", okrId);
+  if (error) return { error: error.message };
+
+  if (anterior) {
+    await registrarCambios({ okrId }, anterior, campos);
+  }
+
+  revalidatePath("/okrs");
+  revalidatePath("/okrs/colaborativos");
+  revalidatePath("/");
+  return undefined;
+}
+
+export async function agregarResponsable(
+  _prevState: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const okrTrimestralId = str(formData, "okr_trimestral_id");
+  const usuarioId = str(formData, "usuario_id");
+  const area = str(formData, "area");
+
+  if (!okrTrimestralId || !usuarioId || !area) {
+    return { error: "Elegí la persona y el área con la que participa." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("okr_responsables")
+    .insert({ okr_trimestral_id: okrTrimestralId, usuario_id: usuarioId, area });
+
+  // 23505 = unique_violation. Que ya esté cargada no es un error para quien
+  // usa la pantalla: el estado final es el que quería.
+  if (error && error.code !== "23505") return { error: error.message };
+
+  revalidatePath("/okrs/colaborativos");
+  return undefined;
+}
+
+export async function quitarResponsable(responsableId: string) {
+  const supabase = await createClient();
+  await supabase.from("okr_responsables").delete().eq("id", responsableId);
+  revalidatePath("/okrs/colaborativos");
 }
 
 export async function createKeyResult(
@@ -169,20 +286,34 @@ export async function updateKeyResult(
   }
 
   const supabase = await createClient();
+
+  // Se lee antes de escribir: el historial necesita el valor viejo y una vez
+  // hecho el update ya no está en ningún lado.
+  const { data: anterior } = await supabase
+    .from("key_results")
+    .select("*")
+    .eq("id", krId)
+    .maybeSingle();
+
+  const campos = {
+    titulo,
+    tipo_medicion: tipoMedicion,
+    valor_inicial: Number(formData.get("valor_inicial")) || 0,
+    valor_meta: tipoMedicion === "hitos" ? 1 : valorMeta,
+    cliente_asociado: optionalStr(formData, "cliente_asociado"),
+    margen_utilidad_esperado:
+      Number(formData.get("margen_utilidad_esperado")) || 65.0,
+  };
+
   const { error } = await supabase
     .from("key_results")
-    .update({
-      titulo,
-      tipo_medicion: tipoMedicion,
-      valor_inicial: Number(formData.get("valor_inicial")) || 0,
-      valor_meta: tipoMedicion === "hitos" ? 1 : valorMeta,
-      cliente_asociado: optionalStr(formData, "cliente_asociado"),
-      margen_utilidad_esperado:
-        Number(formData.get("margen_utilidad_esperado")) || 65.0,
-      updated_at: new Date().toISOString(),
-    })
+    .update({ ...campos, updated_at: new Date().toISOString() })
     .eq("id", krId);
   if (error) return { error: error.message };
+
+  if (anterior) {
+    await registrarCambios({ krId }, anterior, campos);
+  }
 
   if (tipoMedicion === "hitos") {
     // Cada fila del checklist viaja como par (hito_id, hito_titulo); id vacío = fila nueva.

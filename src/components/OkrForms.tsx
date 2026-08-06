@@ -1,14 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   createOkrAnual,
   createOkrTrimestral,
   createPilar,
+  updateOkrTrimestral,
   type FormActionState,
 } from "@/app/(protected)/okrs/actions";
 import { AREAS, TRIMESTRES } from "@/lib/types";
-import type { OkrAnual, Pilar } from "@/lib/types";
+import type { Area, OkrAnual, OkrTrimestral, Pilar } from "@/lib/types";
 
 const inputClass =
   "w-full rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm";
@@ -85,6 +86,156 @@ export function NewOkrAnualForm({ pilares }: { pilares: Pilar[] }) {
   );
 }
 
+/** Casilla de colaborativo más la grilla de áreas.
+ *
+ * Las áreas aparecen solo con la casilla tildada: mostrarlas siempre invita
+ * a marcar áreas en objetivos de una sola, y después el filtro de
+ * colaborativos trae cosas que no lo son. */
+function CamposColaborativos({
+  defaultChecked = false,
+  defaultAreas = [],
+}: {
+  defaultChecked?: boolean;
+  defaultAreas?: Area[];
+}) {
+  const [colaborativo, setColaborativo] = useState(defaultChecked);
+
+  return (
+    <div className="space-y-2 rounded-md border border-linea p-2.5">
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="es_colaborativo"
+          checked={colaborativo}
+          onChange={(e) => setColaborativo(e.target.checked)}
+          className="accent-oxford"
+        />
+        <span className="font-medium">Objetivo colaborativo</span>
+      </label>
+      <p className="text-xs text-tenue">
+        Transversal a varias áreas, como “Vender más Oxford” o “Eficiencia
+        operativa global”.
+      </p>
+
+      {colaborativo && (
+        <div className="space-y-1 pt-1">
+          <label className={labelClass}>Áreas involucradas (mínimo dos)</label>
+          <div className="grid gap-1 sm:grid-cols-2">
+            {AREAS.map((a) => (
+              <label key={a} className="flex items-center gap-1.5 text-xs">
+                <input
+                  type="checkbox"
+                  name="areas_involucradas"
+                  value={a}
+                  defaultChecked={defaultAreas.includes(a)}
+                  className="accent-oxford"
+                />
+                {a}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function EditOkrTrimestralForm({
+  okr,
+  okrsAnuales,
+  onDone,
+}: {
+  okr: OkrTrimestral;
+  okrsAnuales: OkrAnual[];
+  onDone?: () => void;
+}) {
+  const [state, formAction, pending] = useActionState<FormActionState, FormData>(
+    async (prev, formData) => {
+      const result = await updateOkrTrimestral(okr.id, prev, formData);
+      if (!result?.error) onDone?.();
+      return result;
+    },
+    undefined
+  );
+
+  return (
+    <form action={formAction} className="space-y-2">
+      <div className="space-y-1">
+        <label className={labelClass}>OKR anual</label>
+        <select
+          name="okr_anual_id"
+          className={inputClass}
+          defaultValue={okr.okr_anual_id ?? ""}
+        >
+          <option value="">Sin alinear todavía</option>
+          {okrsAnuales.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.titulo}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="space-y-1">
+        <label className={labelClass}>Área principal</label>
+        <select name="area" required className={inputClass} defaultValue={okr.area}>
+          {AREAS.map((a) => (
+            <option key={a} value={a}>
+              {a}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="space-y-1">
+        <label className={labelClass}>Título</label>
+        <input name="titulo" required defaultValue={okr.titulo} className={inputClass} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <label className={labelClass}>Trimestre</label>
+          <select
+            name="trimestre"
+            required
+            className={inputClass}
+            defaultValue={okr.trimestre}
+          >
+            {TRIMESTRES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className={labelClass}>Año</label>
+          <input
+            name="anio"
+            type="number"
+            defaultValue={okr.anio}
+            className={inputClass}
+          />
+        </div>
+      </div>
+      <div className="space-y-1">
+        <label className={labelClass}>Responsable que rinde cuentas</label>
+        <input
+          name="responsable"
+          required
+          defaultValue={okr.responsable}
+          className={inputClass}
+        />
+      </div>
+      <CamposColaborativos
+        defaultChecked={okr.es_colaborativo}
+        defaultAreas={okr.areas_involucradas ?? []}
+      />
+      <ErrorText state={state} />
+      <button type="submit" disabled={pending} className={submitClass}>
+        {pending ? "Guardando…" : "Guardar cambios"}
+      </button>
+    </form>
+  );
+}
+
 export function NewOkrTrimestralForm({ okrsAnuales }: { okrsAnuales: OkrAnual[] }) {
   const [state, formAction, pending] = useActionState<FormActionState, FormData>(
     createOkrTrimestral,
@@ -145,6 +296,7 @@ export function NewOkrTrimestralForm({ okrsAnuales }: { okrsAnuales: OkrAnual[] 
         <label className={labelClass}>Responsable</label>
         <input name="responsable" required className={inputClass} />
       </div>
+      <CamposColaborativos />
       <ErrorText state={state} />
       <button type="submit" disabled={pending} className={submitClass}>
         {pending ? "Creando…" : "Crear OKR trimestral"}

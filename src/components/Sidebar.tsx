@@ -46,6 +46,12 @@ const SECCIONES: Seccion[] = [
         label: "Alineación Estratégica",
         descripcion: "Pilares 2026 y arbolado de objetivos",
       },
+      {
+        href: "/okrs/colaborativos",
+        icono: "🤝",
+        label: "OKRs Colaborativos",
+        descripcion: "Objetivos transversales a varias áreas",
+      },
     ],
   },
   {
@@ -114,8 +120,21 @@ function seccionDe(pathname: string): string | null {
   return null;
 }
 
+/** El href más largo que matchea gana.
+ *
+ * Con `startsWith` a secas, estar en /okrs/colaborativos prendía también a
+ * /okrs y quedaban dos ítems resaltados. */
 function esRutaActiva(href: string, pathname: string): boolean {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+  if (href === "/") return pathname === "/";
+  if (pathname !== href && !pathname.startsWith(`${href}/`)) return false;
+
+  const masEspecifico = SECCIONES.flatMap((s) => s.items).some(
+    (i) =>
+      i.href !== href &&
+      i.href.length > href.length &&
+      (pathname === i.href || pathname.startsWith(`${i.href}/`))
+  );
+  return !masEspecifico;
 }
 
 export function Sidebar({

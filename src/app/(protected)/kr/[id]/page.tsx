@@ -8,6 +8,8 @@ import { CheckInForm } from "@/components/CheckInForm";
 import { HitosList } from "@/components/HitosList";
 import { MargenForm } from "@/components/MargenForm";
 import { IniciativasPanel } from "@/components/IniciativasPanel";
+import { HistorialLista } from "@/components/HistorialEdicion";
+import { historialDe } from "@/lib/historial-server";
 import { formatValor, hasAlertaRentabilidad, isKrCumplido } from "@/lib/kr-logic";
 
 export default async function KrDetailPage({
@@ -46,6 +48,7 @@ export default async function KrDetailPage({
     .order("creado_at", { ascending: true });
 
   const historial = (checkIns ?? []) as CheckIn[];
+  const cambios = await historialDe({ krId: id });
   const alerta = hasAlertaRentabilidad(krCompleto);
   const cumplido = isKrCumplido(krCompleto);
   const okrTrim = krCompleto.okr_trimestral;
@@ -120,6 +123,11 @@ export default async function KrDetailPage({
               iniciativas={krCompleto.iniciativas ?? []}
               responsablePorDefecto={okrTrim?.responsable}
             />
+          </div>
+
+          <div className="rounded-lg border border-linea p-4">
+            <h3 className="mb-3 text-sm font-semibold">Historial de ediciones</h3>
+            <HistorialLista cambios={cambios} />
           </div>
 
           <div className="rounded-lg border border-linea p-4">
