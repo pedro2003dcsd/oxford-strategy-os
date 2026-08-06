@@ -169,6 +169,18 @@ export interface CompromisoLom {
   creado_at: string;
 }
 
+/** Acta de una reunión de directorio, para la pizarra de la LOM. */
+export interface ActaDirectorio {
+  id: string;
+  fecha: string;
+  titulo: string;
+  contenido: string | null;
+  autor_nombre: string | null;
+  autor_id: string | null;
+  creado_at: string;
+  actualizado_at: string;
+}
+
 export interface CheckIn {
   id: string;
   kr_id: string;
