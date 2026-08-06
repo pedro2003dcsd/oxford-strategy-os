@@ -1,10 +1,15 @@
-import { KpisClientes } from "@/components/prototipo/KpisClientes";
+import { KpisClientes } from "@/components/clientes/KpisClientes";
+import { listarClientes, listarEvaluaciones } from "@/lib/clientes";
 
 export const metadata = {
   title: "KPIs Clientes · Oxford Strategy OS",
 };
 
-/** Prototipo: los datos son de maqueta, no salen de la base. */
-export default function KpisClientesPage() {
-  return <KpisClientes />;
+export default async function KpisClientesPage() {
+  const [clientes, evaluaciones] = await Promise.all([
+    listarClientes(),
+    listarEvaluaciones(),
+  ]);
+
+  return <KpisClientes clientes={clientes} evaluaciones={evaluaciones} />;
 }

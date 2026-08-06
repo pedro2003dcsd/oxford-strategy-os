@@ -1,10 +1,15 @@
-import { KataBoard } from "@/components/prototipo/KataBoard";
+import { KataBoard } from "@/components/clientes/KataBoard";
+import { listarClientes, listarCondicionesKata } from "@/lib/clientes";
 
 export const metadata = {
   title: "Kata Board · Oxford Strategy OS",
 };
 
-/** Prototipo: los datos son de maqueta, no salen de la base. */
-export default function KataPage() {
-  return <KataBoard />;
+export default async function KataPage() {
+  const [clientes, condiciones] = await Promise.all([
+    listarClientes(),
+    listarCondicionesKata(),
+  ]);
+
+  return <KataBoard clientes={clientes} condiciones={condiciones} />;
 }

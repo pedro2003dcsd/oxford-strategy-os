@@ -183,13 +183,13 @@ export interface CheckIn {
 // Performance Clientes
 // ------------------------------------------------------------
 
-export const ESTADOS_CLIENTE = ["activo", "pausado", "baja"] as const;
+export const ESTADOS_CLIENTE = ["activo", "en_riesgo", "onboarding"] as const;
 export type EstadoCliente = (typeof ESTADOS_CLIENTE)[number];
 
 export const ESTADO_CLIENTE_LABELS: Record<EstadoCliente, string> = {
   activo: "Activo",
-  pausado: "Pausado",
-  baja: "Baja",
+  en_riesgo: "En Riesgo",
+  onboarding: "Onboarding",
 };
 
 /** Fuente de verdad de la cuenta. Antes era texto suelto en dos tablas. */
@@ -201,6 +201,9 @@ export interface Cliente {
   fee_mensual: number;
   pod_asignado: string | null;
   looker_studio_url: string | null;
+  /** Ritmo de la cuenta: "Weekly Quincenal", "Retro Mensual". Es del squad
+   * entero, no de cada integrante. */
+  ceremonias: string[];
   creado_at: string;
   actualizado_at: string;
 }
@@ -211,9 +214,14 @@ export type RolSquad = (typeof ROLES_SQUAD)[number];
 export interface SquadMiembro {
   id: string;
   cliente_id: string;
-  usuario_id: string;
+  /** Quién es. Fuente de verdad: medio squad son proveedores externos
+   * ("OMG / Maribel") que no tienen cuenta en la app. */
+  nombre: string;
+  /** Solo si además tiene acceso a la app. Permite cruzar con Mis Objetivos. */
+  usuario_id: string | null;
   rol_squad: RolSquad;
-  ceremonias: string[];
+  /** Arte, Digital, Pauta Digital, Mailing… */
+  especialidad: string | null;
   creado_at: string;
 }
 
@@ -231,9 +239,13 @@ export interface MetricaCliente {
   cliente_id: string;
   nivel: NivelMetrica;
   titulo: string;
-  meta: number | null;
-  valor_actual: number | null;
+  /** Texto, no número: las metas reales son "> 7,8x" o "$8.000 a $20.000". */
+  meta: string | null;
+  valor_actual: string | null;
   unidad: string | null;
+  /** El número que sí existe siempre. Es lo que mueve la barra. */
+  progreso_porcentaje: number;
+  detalle: string | null;
   kr_asociado_id: string | null;
   creado_at: string;
   actualizado_at: string;
@@ -243,19 +255,27 @@ export interface KataCondicion {
   id: string;
   cliente_id: string;
   titulo: string;
+  /** La métrica de la condición objetivo: "ROAS > 7,8x", "Margen > 65%". */
   meta: string | null;
   progreso_porcentaje: number;
   obstaculo_actual: string | null;
   siguiente_paso: string | null;
+  responsable_nombre: string | null;
   responsable_id: string | null;
   creado_at: string;
   actualizado_at: string;
 }
 
-export const ESTADOS_PDCA = ["en_curso", "validado", "descartado"] as const;
+export const ESTADOS_PDCA = [
+  "planificado",
+  "en_curso",
+  "validado",
+  "descartado",
+] as const;
 export type EstadoPdca = (typeof ESTADOS_PDCA)[number];
 
 export const ESTADO_PDCA_LABELS: Record<EstadoPdca, string> = {
+  planificado: "Planificado",
   en_curso: "En curso",
   validado: "Validado",
   descartado: "Descartado",
@@ -267,19 +287,54 @@ export interface PdcaExperimento {
   hipotesis: string;
   experimento: string | null;
   estado: EstadoPdca;
+  aprendizaje: string | null;
   creado_at: string;
   actualizado_at: string;
 }
 
-/** Los cuatro bloques van como jsonb: la grilla cambia cada trimestre. */
+/** Puntaje 1 a 5 de un criterio de la evaluación 360. */
+export interface ItemEvaluacion {
+  criterio: string;
+  puntaje: number;
+}
+
+export interface PuntoTendencia {
+  mes: string;
+  puntaje: number;
+}
+
+/** Bloque del Tablero de Seguimiento, con su subtotal y quién califica. */
+export interface CategoriaValoracion {
+  titulo: string;
+  fuente: string;
+  items: ItemEvaluacion[];
+  subtotal: number;
+  etiqueta?: string;
+}
+
+export interface KpiCalidad {
+  titulo: string;
+  meta: string;
+  actual: string;
+  estado: Semaforo;
+  nota?: string;
+}
+
+/** Los bloques van como jsonb: la grilla cambia de trimestre a trimestre y
+ * normalizarla obligaría a migrar el esquema cada vez que el directorio
+ * agrega una fila. */
 export interface Evaluacion360 {
   id: string;
   cliente_id: string;
   periodo: string;
-  notas_comerciales_json: Record<string, unknown>;
-  notas_performance_json: Record<string, unknown>;
-  notas_relacionamiento_json: Record<string, unknown>;
-  kpis_calidad_json: Record<string, unknown>;
+  notas_comerciales_json: ItemEvaluacion[];
+  /** Oxford evaluando al cliente. */
+  notas_performance_json: ItemEvaluacion[];
+  /** El cliente evaluando a Oxford. */
+  notas_relacionamiento_json: ItemEvaluacion[];
+  kpis_calidad_json: KpiCalidad[];
+  tendencia_json: PuntoTendencia[];
+  matriz_json: CategoriaValoracion[];
   creado_at: string;
   actualizado_at: string;
 }
