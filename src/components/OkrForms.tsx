@@ -8,6 +8,7 @@ import {
   updateOkrTrimestral,
   type FormActionState,
 } from "@/app/(protected)/okrs/actions";
+import { Modal } from "@/components/Modal";
 import { AREAS, TRIMESTRES } from "@/lib/types";
 import type { Area, OkrAnual, OkrTrimestral, Pilar } from "@/lib/types";
 
@@ -99,6 +100,17 @@ function CamposColaborativos({
   defaultAreas?: Area[];
 }) {
   const [colaborativo, setColaborativo] = useState(defaultChecked);
+  // Controlado y no `defaultChecked`: useActionState re-renderiza el
+  // formulario cuando la acción devuelve error, y con checkbox no
+  // controlados eso borra lo que la persona acababa de tildar. Justo
+  // después de un error es el peor momento para perderle la selección.
+  const [areas, setAreas] = useState<Area[]>(defaultAreas);
+
+  function alternar(area: Area, marcada: boolean) {
+    setAreas((prev) =>
+      marcada ? [...prev, area] : prev.filter((a) => a !== area)
+    );
+  }
 
   return (
     <div className="space-y-2 rounded-md border border-linea p-2.5">
@@ -119,7 +131,10 @@ function CamposColaborativos({
 
       {colaborativo && (
         <div className="space-y-1 pt-1">
-          <label className={labelClass}>Áreas involucradas (mínimo dos)</label>
+          <label className={labelClass}>
+            Áreas involucradas (mínimo dos) · {areas.length} elegida
+            {areas.length === 1 ? "" : "s"}
+          </label>
           <div className="grid gap-1 sm:grid-cols-2">
             {AREAS.map((a) => (
               <label key={a} className="flex items-center gap-1.5 text-xs">
@@ -127,7 +142,8 @@ function CamposColaborativos({
                   type="checkbox"
                   name="areas_involucradas"
                   value={a}
-                  defaultChecked={defaultAreas.includes(a)}
+                  checked={areas.includes(a)}
+                  onChange={(e) => alternar(a, e.target.checked)}
                   className="accent-oxford"
                 />
                 {a}
@@ -137,6 +153,34 @@ function CamposColaborativos({
         </div>
       )}
     </div>
+  );
+}
+
+export function OkrTrimestralModal({
+  okr,
+  okrsAnuales,
+  triggerLabel,
+  triggerClassName,
+}: {
+  okr: OkrTrimestral;
+  okrsAnuales: OkrAnual[];
+  triggerLabel: string;
+  triggerClassName: string;
+}) {
+  return (
+    <Modal
+      titulo="Editar OKR trimestral"
+      triggerLabel={triggerLabel}
+      triggerClassName={triggerClassName}
+    >
+      {(cerrar) => (
+        <EditOkrTrimestralForm
+          okr={okr}
+          okrsAnuales={okrsAnuales}
+          onDone={cerrar}
+        />
+      )}
+    </Modal>
   );
 }
 

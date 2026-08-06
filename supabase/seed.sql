@@ -115,7 +115,9 @@ begin
     cliente_asociado, margen_utilidad_esperado, margen_actual_pct, margen_actualizado_at)
   values (ot, 'Alcanzar $12M de retorno en ventas para el cliente Batistella (Bati Off)',
           'moneda', 0, 12000000, 0, 'rojo',
-          'Batistella', 65.0, 54.0, now() - interval '2 days')
+          -- Igual que en proyectos_solop: si difiere, el trigger de 0013 crea
+          -- dos clientes distintos para la misma cuenta.
+          'Batistella (Bati Off)', 65.0, 54.0, now() - interval '2 days')
   returning id into kr_batistella;
 
   insert into check_ins (kr_id, usuario, valor_registrado, estado_semaforo, comentario_bloqueos, creado_at) values

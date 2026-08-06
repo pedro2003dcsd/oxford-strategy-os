@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SemaforoBadge } from "@/components/SemaforoBadge";
-import { NewOkrAnualForm, NewOkrTrimestralForm, NewPilarForm } from "@/components/OkrForms";
+import {
+  NewOkrAnualForm,
+  NewOkrTrimestralForm,
+  NewPilarForm,
+  OkrTrimestralModal,
+} from "@/components/OkrForms";
 import { Collapsible } from "@/components/Collapsible";
 import { KrModal } from "@/components/KrModal";
 import { AlinearOkr } from "@/components/AlinearOkr";
@@ -173,11 +178,24 @@ export default async function OkrsPage() {
             <span className="mr-1.5 rounded bg-linea/60 px-1.5 py-0.5 text-xs font-semibold">
               {ot.area}
             </span>
+            {ot.es_colaborativo && (
+              <span className="mr-1.5 rounded bg-oxford-suave px-1.5 py-0.5 text-xs font-semibold text-oxford">
+                🤝 Colaborativo
+              </span>
+            )}
             {ot.titulo}{" "}
             <span className="font-normal text-tenue">
               · {ot.trimestre} {ot.anio} · {ot.responsable}
             </span>
           </p>
+        }
+        accion={
+          <OkrTrimestralModal
+            okr={ot}
+            okrsAnuales={okrsAnualesList}
+            triggerLabel="Editar"
+            triggerClassName="shrink-0 rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
+          />
         }
       >
         <LeyendaEdicion edicion={edicionesOkr.get(ot.id)} />
