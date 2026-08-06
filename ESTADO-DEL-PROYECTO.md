@@ -140,6 +140,9 @@ Migraciones en `supabase/migrations/`:
   los datos reales. Ver la cabecera del archivo: son cuatro cosas que la
   especificación no preveía.
 - `0012_actas_directorio.sql` — actas para la pizarra de la LOM.
+- `0013_sincronizar_cliente.sql` — trigger que resuelve `cliente_id` solo a
+  partir del nombre, y lo crea si no existe. Sin esto, cada proyecto nuevo
+  cargado en SOLOP nacía sin cliente y la ficha no lo veía.
 
 **Las columnas viejas de cliente (texto) siguen ahí.** `proyectos_solop.cliente`
 y `key_results.cliente_asociado` conviven con las FK nuevas hasta que el
