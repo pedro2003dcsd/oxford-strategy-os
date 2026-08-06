@@ -1,6 +1,6 @@
 # Estado del proyecto — Oxford Strategy OS
 
-_Última actualización: 3 de agosto de 2026_
+_Última actualización: 4 de agosto de 2026_
 
 Documento de traspaso: si empezás una conversación nueva con Claude sobre este
 proyecto, pedile que lea este archivo primero.
@@ -156,6 +156,48 @@ desincronizó una vez.
 - `npm audit` reporta vulnerabilidades en `postcss`/`sharp` que vienen dentro
   de `node_modules/next`. Arreglarlas con `--force` bajaría Next.js a la v9.
 
+## Prototipo en evaluación: módulo Performance Clientes
+
+Vive en la rama **`prototipo-sidebar`**, sin mergear. `main` y producción no
+tienen nada de esto.
+
+Preview desplegado (pide login de Vercel y después el de la app):
+https://oxford-strategy-21atii1q3-pedro2003dcsds-projects.vercel.app
+
+Qué trae:
+
+- **Navegación con sidebar** desplegable desde el botón ☰, con tres
+  categorías en acordeón, ruta activa resaltada, opción de fijarlo en
+  escritorio y pie con el usuario. Reemplaza la barra de links de arriba.
+- **Cartera de Clientes** (`/clientes`) — ficha por cuenta con métricas de
+  tres niveles, composición del squad (PO, chapter leads, ejecutores,
+  ceremonias), filtro por PO y link al Looker Studio de Eseka.
+- **Kata Board** (`/kata`) — condición objetivo, experimentos PDCA y
+  rentabilidad por hora.
+- **KPIs Clientes** (`/kpis-clientes`) — evaluación 360 bidireccional, matriz
+  de valoración 1 a 5 por responsable, KPIs de calidad y tendencia mensual.
+
+**Todo eso son maquetas.** Los datos están escritos a mano en
+`src/lib/prototipo/clientes.ts` y ninguna acción guarda: los botones muestran
+un aviso de simulación. Scout sí lee esos datos y puede responder sobre
+squads, la matriz de Eseka y el rendimiento de Panther.
+
+Los seis clientes cargados son Batistella, Eseka, Conquistadores, Sipssa,
+Blangino y Panther, con datos reales de Grupo Oxford.
+
+El guion para presentarlo está en `GUION-DEMO-PROTOTIPO.md`, en esa rama.
+
+**Si el directorio lo aprueba, el primer paso NO son las pantallas.** Hoy
+`proyectos_solop.cliente` es texto suelto. Hay que crear la tabla `clientes`
+y apuntar SOLOP ahí, o van a quedar dos listas que se desincronizan y el
+mismo cliente escrito de dos formas. Recién después, las tablas de squads,
+condiciones objetivo, experimentos y evaluaciones, con sus formularios.
+Estimado: dos jornadas de trabajo más la carga de datos de las seis cuentas.
+
+Quedó acordado que, si se construye, se hace en rama con tests automáticos de
+la lógica nueva (el proyecto todavía no tiene ninguno) y una pasada visual
+conjunta en el preview antes de mergear.
+
 ## Próximo paso acordado
 
 **Mails de recordatorio automáticos.** Una tarea programada en Vercel que
@@ -170,6 +212,8 @@ Meta y costo por mensaje. El botón manual de Check-in ya cubre ese caso.
 
 - `GUION-DEMO.md` — guion de 15 minutos para presentar al directorio, con
   checklist previo, preguntas esperadas y plan B.
+- `GUION-DEMO-PROTOTIPO.md` — guion del módulo Performance Clientes. **Está
+  en la rama `prototipo-sidebar`, no en `main`.**
 - `GUIA-LOGIN-GOOGLE.md` — paso a paso para activar el ingreso con Google.
 - `AGENTS.md` — aviso sobre los cambios de Next.js 16.
 
