@@ -50,8 +50,11 @@ function ItemCompromiso({
   deshabilitado: boolean;
 }) {
   const vencido = compromisoVencido(compromiso);
+  // Un <div> y no un <li>: la revisión de la LOM pasada lo envuelve en su
+  // propio <li> para colgarle el KR debajo, y un <li> dentro de otro <li>
+  // rompía la hidratación de toda la pantalla. Cada llamador pone el <li>.
   return (
-    <li className="flex items-start gap-2 text-xs">
+    <div className="flex items-start gap-2 text-xs">
       <input
         type="checkbox"
         checked={compromiso.cumplido}
@@ -82,7 +85,7 @@ function ItemCompromiso({
           )}
         </span>
       </span>
-    </li>
+    </div>
   );
 }
 
@@ -110,16 +113,17 @@ function CompromisosLom({
       )}
       <ul className="space-y-1.5">
         {compromisos.map((c) => (
-          <ItemCompromiso
-            key={c.id}
-            compromiso={c}
-            deshabilitado={isPending}
-            onToggle={(cumplido) =>
-              startTransition(() => {
-                toggleCompromisoLom(c.id, cumplido);
-              })
-            }
-          />
+          <li key={c.id}>
+            <ItemCompromiso
+              compromiso={c}
+              deshabilitado={isPending}
+              onToggle={(cumplido) =>
+                startTransition(() => {
+                  toggleCompromisoLom(c.id, cumplido);
+                })
+              }
+            />
+          </li>
         ))}
       </ul>
       <form action={formAction} className="space-y-1.5">

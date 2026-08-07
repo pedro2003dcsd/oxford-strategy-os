@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import type { CheckIn, CompromisoLom, KeyResultCompleto } from "@/lib/types";
-import { LomClient } from "@/components/LomClient";
+import type {
+  ActaDirectorio,
+  CheckIn,
+  CompromisoLom,
+  KeyResultCompleto,
+} from "@/lib/types";
+import { LomVistas } from "@/components/LomVistas";
 
 export default async function LomPage() {
   const supabase = await createClient();
@@ -48,5 +53,17 @@ export default async function LomPage() {
     compromisos = (comp ?? []) as CompromisoLom[];
   }
 
-  return <LomClient krs={lista} checkIns={checkIns} compromisos={compromisos} />;
+  const { data: actasData } = await supabase
+    .from("actas_directorio")
+    .select("*")
+    .order("fecha", { ascending: false });
+
+  return (
+    <LomVistas
+      krs={lista}
+      checkIns={checkIns}
+      compromisos={compromisos}
+      actas={(actasData ?? []) as ActaDirectorio[]}
+    />
+  );
 }

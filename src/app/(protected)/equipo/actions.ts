@@ -28,7 +28,7 @@ export async function agregarUsuario(
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const nombre = String(formData.get("nombre") ?? "").trim();
   const responsable = String(formData.get("responsable") ?? "").trim();
-  const rol = String(formData.get("rol") ?? "lider") as Rol;
+  const rol = String(formData.get("rol") ?? "equipo") as Rol;
 
   if (!email || !email.includes("@")) return { error: "Ingresá un email válido." };
   if (!nombre) return { error: "Ingresá el nombre de la persona." };

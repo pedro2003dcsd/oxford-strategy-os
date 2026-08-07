@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SemaforoBadge } from "@/components/SemaforoBadge";
-import { NewOkrAnualForm, NewOkrTrimestralForm, NewPilarForm } from "@/components/OkrForms";
+import {
+  NewOkrAnualForm,
+  NewOkrTrimestralForm,
+  NewPilarForm,
+  OkrTrimestralModal,
+} from "@/components/OkrForms";
 import { Collapsible } from "@/components/Collapsible";
 import { KrModal } from "@/components/KrModal";
 import { AlinearOkr } from "@/components/AlinearOkr";
+import { LeyendaEdicion } from "@/components/HistorialEdicion";
+import { ultimasEdiciones } from "@/lib/historial-server";
 import { hasAlertaRentabilidad, progresoPct } from "@/lib/kr-logic";
 import type {
   HitoKr,
@@ -63,6 +70,11 @@ export default async function OkrsPage() {
     if (!krsPorTrim.has(kr.okr_trimestral_id)) krsPorTrim.set(kr.okr_trimestral_id, []);
     krsPorTrim.get(kr.okr_trimestral_id)!.push(kr);
   }
+
+  const [edicionesKr, edicionesOkr] = await Promise.all([
+    ultimasEdiciones("kr_id", keyResultsList.map((kr) => kr.id)),
+    ultimasEdiciones("okr_id", okrsTrimestralesList.map((ot) => ot.id)),
+  ]);
 
   /** Todos los KRs que cuelgan de un OKR anual, atravesando sus trimestrales. */
   function krsDeAnual(okrAnualId: string) {
@@ -131,22 +143,25 @@ export default async function OkrsPage() {
 
   function renderKr(kr: (typeof keyResultsList)[number]) {
     return (
-      <div key={kr.id} className="flex items-center gap-2 py-1 text-sm">
-        <Link href={`/kr/${kr.id}`} className="truncate hover:underline">
-          {kr.titulo}
-        </Link>
-        <SemaforoBadge estado={kr.estado_semaforo} compact />
-        {hasAlertaRentabilidad(kr) && (
-          <span className="text-xs text-red-600" title="Alerta de rentabilidad">
-            ⚠
-          </span>
-        )}
-        <KrModal
-          kr={kr}
-          hitos={kr.hitos_kr}
-          triggerLabel="Editar"
-          triggerClassName="ml-auto shrink-0 rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
-        />
+      <div key={kr.id} className="py-1">
+        <div className="flex items-center gap-2 text-sm">
+          <Link href={`/kr/${kr.id}`} className="truncate hover:underline">
+            {kr.titulo}
+          </Link>
+          <SemaforoBadge estado={kr.estado_semaforo} compact />
+          {hasAlertaRentabilidad(kr) && (
+            <span className="text-xs text-red-600" title="Alerta de rentabilidad">
+              ⚠
+            </span>
+          )}
+          <KrModal
+            kr={kr}
+            hitos={kr.hitos_kr}
+            triggerLabel="Editar"
+            triggerClassName="ml-auto shrink-0 rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
+          />
+        </div>
+        <LeyendaEdicion edicion={edicionesKr.get(kr.id)} />
       </div>
     );
   }
@@ -163,13 +178,27 @@ export default async function OkrsPage() {
             <span className="mr-1.5 rounded bg-linea/60 px-1.5 py-0.5 text-xs font-semibold">
               {ot.area}
             </span>
+            {ot.es_colaborativo && (
+              <span className="mr-1.5 rounded bg-oxford-suave px-1.5 py-0.5 text-xs font-semibold text-oxford">
+                🤝 Colaborativo
+              </span>
+            )}
             {ot.titulo}{" "}
             <span className="font-normal text-tenue">
               · {ot.trimestre} {ot.anio} · {ot.responsable}
             </span>
           </p>
         }
+        accion={
+          <OkrTrimestralModal
+            okr={ot}
+            okrsAnuales={okrsAnualesList}
+            triggerLabel="Editar"
+            triggerClassName="shrink-0 rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
+          />
+        }
       >
+        <LeyendaEdicion edicion={edicionesOkr.get(ot.id)} />
         {krs.length === 0 ? (
           <p className="py-1 text-xs text-tenue">Sin Key Results todavía.</p>
         ) : (

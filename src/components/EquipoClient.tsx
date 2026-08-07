@@ -86,7 +86,7 @@ export function EquipoClient({
           <div className="space-y-1">
             <label className="text-xs font-medium text-tenue">Rol</label>
             <div className="flex gap-2">
-              <select name="rol" defaultValue="lider" className={inputClass}>
+              <select name="rol" defaultValue="equipo" className={inputClass}>
                 {ROLES.map((r) => (
                   <option key={r} value={r}>
                     {ROL_LABELS[r]}
