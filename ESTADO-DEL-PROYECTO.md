@@ -76,6 +76,17 @@ sección de accesos más abajo.
    proyectos en cada consulta y arma el contexto. Prompts rápidos, cápsulas de
    seguimiento, badges de color y KRs que abren el panel lateral.
 8. **Equipo** (`/equipo`) — administración de accesos.
+9. **OKRs Colaborativos** (`/okrs/colaborativos`) — objetivos transversales a
+   varias áreas, con avance consolidado y un referente por área.
+10. **Cartera de Clientes** (`/clientes`) — ficha por cuenta: squad, métricas
+    de tres niveles y la rentabilidad cruzada desde SOLOP.
+11. **Kata Board** (`/kata`) — condición objetivo, experimentos PDCA y
+    rentabilidad por hora.
+12. **KPIs Clientes** (`/kpis-clientes`) — evaluación 360 bidireccional,
+    matriz de valoración y tendencia mensual.
+
+La navegación es un **sidebar** desplegable con tres categorías en acordeón,
+que reemplazó la barra de links de arriba.
 
 **Degradación elegante:** Informes y Scout funcionan sin `ANTHROPIC_API_KEY`.
 Responden por reglas sobre los mismos datos y lo avisan en pantalla.
@@ -148,6 +159,14 @@ Migraciones en `supabase/migrations/`:
 y `key_results.cliente_asociado` conviven con las FK nuevas hasta que el
 código desplegado no las use más. Borrarlas antes rompe SOLOP.
 
+Scripts sueltos, que no son migraciones y se pegan cuando hacen falta:
+
+- `supabase/datos-performance-clientes.sql` — las seis cuentas completas.
+  Idempotente.
+- `supabase/fusionar-clientes-duplicados.sql` — cuando el mismo cliente
+  quedó cargado con dos nombres distintos. Ya se usó una vez, para fusionar
+  "Batistella" dentro de "Batistella (Bati Off)".
+
 **Las migraciones se aplican a mano en la nube.** `supabase/aplicar-en-la-nube.sql`
 junta 0004 a 0007 en un script idempotente listo para pegar en el SQL editor.
 Ese archivo **no** incluye los datos: para eso se pega `supabase/seed.sql` por
@@ -162,6 +181,11 @@ desincronizó una vez.
   semana.**
 - **Margen SOLOP: carga manual.** El campo queda listo para integrar una API o
   export de SOLOP más adelante.
+- **El formulario de SOLOP todavía escribe el cliente como texto libre.** El
+  trigger de 0013 resuelve o crea el cliente solo, así que no quedan
+  huérfanos, pero un typo —"Batistela", "Eseka " con espacio— crea una cuenta
+  nueva en vez de avisar. El arreglo durable es un desplegable contra
+  `clientes` con opción de crear explícitamente. Media jornada.
 - **La Estrella Polar y SOLOP cuentan clientes con lógicas distintas**, así
   que muestran números diferentes (0/20 contra 1/20). Sin resolver.
 - **Batistella no dispara "scope creep" en la etiqueta de horas** porque el
@@ -182,13 +206,18 @@ desincronizó una vez.
 - `npm audit` reporta vulnerabilidades en `postcss`/`sharp` que vienen dentro
   de `node_modules/next`. Arreglarlas con `--force` bajaría Next.js a la v9.
 
-## Performance Clientes: aprobado y construido
+## Performance Clientes: en producción
 
-Vive en la rama **`prototipo-sidebar`**, todavía sin mergear. El directorio
-lo aprobó el 6 de agosto de 2026 y se pasó de maqueta a producción real.
+El directorio lo aprobó el 6 de agosto de 2026. Se pasó de maqueta a
+producción real y se mergeó a `main` el mismo día.
 
-Preview desplegado (pide login de Vercel y después el de la app):
-https://oxford-strategy-21atii1q3-pedro2003dcsds-projects.vercel.app
+Los previews de Vercel se generan por deployment, así que el link cambia
+con cada push. El de la última build sale de la pestaña *Deployments* del
+proyecto, o de la API de GitHub:
+
+```bash
+curl -s "https://api.github.com/repos/pedro2003dcsd/oxford-strategy-os/deployments?per_page=1" | grep -o '"statuses_url": "[^"]*"'
+```
 
 - **Navegación con sidebar** desplegable desde el botón ☰, con tres
   categorías en acordeón, ruta activa resaltada, opción de fijarlo en
@@ -208,15 +237,18 @@ borraron. Todo sale de la base y todo guarda. Scout lee los datos reales.
 `proyectos_solop` cruzando por `cliente_id`. Los números de horas, margen y
 rendimiento por hora son los mismos que muestra SOLOP, por construcción.
 
-Los seis clientes de la demo son Batistella, Eseka, Conquistadores, Sipssa,
-Blangino y Panther. **Los datos de esas cuentas hay que volver a cargarlos
-desde las pantallas**: estaban escritos en el archivo que se borró, no en la
-base. Es la tarea que queda antes de mergear.
+Las seis cuentas —Batistella, Eseka, Conquistadores, Sipssa, Blangino y
+Panther— se cargaron con `supabase/datos-performance-clientes.sql`, generado
+desde la maqueta antes de borrarla. **Esos números son los que se
+presentaron al directorio en agosto de 2026; no se actualizan solos.** El
+equipo los corrige desde las pantallas.
 
-El guion para presentarlo está en `GUION-DEMO-PROTOTIPO.md`, en esa rama.
+**Solo Batistella y Ueno 2026 tienen datos en SOLOP.** Las otras cinco
+cuentas muestran "sin horas cargadas" hasta que alguien cargue el proyecto
+en la Torre de Control. Es a propósito: el script de datos no inventó
+números financieros.
 
-Queda pendiente de la condición acordada: **una pasada visual conjunta en el
-preview antes de mergear.** Los tests automáticos ya están (ver más abajo).
+El guion para presentarlo está en `GUION-DEMO-PROTOTIPO.md`.
 
 ## Segunda etapa: aislamiento para usuarios externos (rol `cliente`)
 
@@ -244,6 +276,12 @@ daría una sensación falsa de aislamiento.
 Scout ya está preparado: sus consultas usan el cliente de Supabase de la
 sesión, así que el día que RLS filtre, filtra también para la IA.
 
+## Fase actual: pruebas internas
+
+Del 6 al 8 de agosto de 2026, Mariana, Dolores y el equipo prueban el módulo
+sobre producción y corrigen notas y experimentos desde las pantallas. Los
+formularios de edición ya guardan, así que no hace falta tocar SQL.
+
 ## Próximo paso acordado
 
 **Mails de recordatorio automáticos.** Una tarea programada en Vercel que
@@ -258,8 +296,7 @@ Meta y costo por mensaje. El botón manual de Check-in ya cubre ese caso.
 
 - `GUION-DEMO.md` — guion de 15 minutos para presentar al directorio, con
   checklist previo, preguntas esperadas y plan B.
-- `GUION-DEMO-PROTOTIPO.md` — guion del módulo Performance Clientes. **Está
-  en la rama `prototipo-sidebar`, no en `main`.**
+- `GUION-DEMO-PROTOTIPO.md` — guion del módulo Performance Clientes.
 - `GUIA-LOGIN-GOOGLE.md` — paso a paso para activar el ingreso con Google.
 - `AGENTS.md` — aviso sobre los cambios de Next.js 16.
 
