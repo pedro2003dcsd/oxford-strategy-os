@@ -297,6 +297,8 @@ Meta y costo por mensaje. El botón manual de Check-in ya cubre ese caso.
 - `GUION-DEMO.md` — guion de 15 minutos para presentar al directorio, con
   checklist previo, preguntas esperadas y plan B.
 - `GUION-DEMO-PROTOTIPO.md` — guion del módulo Performance Clientes.
+- `GUIA-PRUEBAS.md` — recorrido de verificación para el equipo: dónde se carga
+  cada dato y dónde tiene que aparecer. Se usó en las pruebas de agosto de 2026.
 - `GUIA-LOGIN-GOOGLE.md` — paso a paso para activar el ingreso con Google.
 - `AGENTS.md` — aviso sobre los cambios de Next.js 16.
 
