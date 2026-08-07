@@ -264,8 +264,13 @@ end $$;
 -- El historial no se edita ni se borra: es auditoría. Se restringe después
 -- de crear la política general, que la pisaría.
 drop policy if exists "authenticated full access" on okr_historial_cambios;
+
+drop policy if exists "historial solo lectura e inserción" on okr_historial_cambios;
 create policy "historial solo lectura e inserción" on okr_historial_cambios
   for select using (auth.role() = 'authenticated');
+
+drop policy if exists "historial inserta" on okr_historial_cambios;
 create policy "historial inserta" on okr_historial_cambios
   for insert with check (auth.role() = 'authenticated');
+
 revoke update, delete on okr_historial_cambios from authenticated;
