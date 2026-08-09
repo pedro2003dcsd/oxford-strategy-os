@@ -126,6 +126,33 @@ Decisiones que conviene no revertir sin pensarlo:
 - El índice del email es case-insensitive, porque Google puede devolver la
   dirección con otra capitalización.
 
+## Responsables de un OKR
+
+Un OKR tiene **uno que rinde cuentas y los que comparten el objetivo**.
+Aparece en "Mis Objetivos" de todos por igual; la diferencia solo importa
+cuando en la LOM hay que preguntarle a alguien.
+
+- Quien rinde cuentas está en `responsable_id`, y los demás en
+  `okr_responsables`. Nadie está en los dos lados a la vez: si estuviera,
+  su avatar saldría duplicado en cada tarjeta.
+- **La columna de texto `responsable` se conserva y se mantiene
+  sincronizada** con el nombre de quien rinde cuentas. La leen los informes,
+  Scout, el resumen de la LOM y el mail de recordatorio. Mientras exista,
+  tiene que decir lo mismo que el id.
+- El desplegable muestra `nombre` y no `responsable`, porque `responsable`
+  es un alias y dos personas pueden compartirlo. Cuando difieren, el alias
+  va entre paréntesis.
+
+**Por qué se hizo:** hasta agosto de 2026 el filtro "Mis Objetivos"
+comparaba el texto del OKR contra `usuarios_autorizados.responsable` con un
+igual exacto. Un "Ayelén" contra un "Ayelén Bruno" devolvía cero objetivos
+sin dar ningún error. No había forma de darse cuenta salvo notar que a
+alguien no le aparecía nada.
+
+**Ojo con los alias repetidos:** si dos personas tienen el mismo valor en
+`responsable`, el backfill de 0014 elige una sin criterio. Conviene que la
+pantalla Equipo no tenga alias duplicados.
+
 ## Base de datos
 
 Migraciones en `supabase/migrations/`:
@@ -154,6 +181,9 @@ Migraciones en `supabase/migrations/`:
 - `0013_sincronizar_cliente.sql` — trigger que resuelve `cliente_id` solo a
   partir del nombre, y lo crea si no existe. Sin esto, cada proyecto nuevo
   cargado en SOLOP nacía sin cliente y la ficha no lo veía.
+- `0014_responsables_por_id.sql` — `responsable_id` en los dos niveles de
+  OKR, y `okr_responsables` generalizada para que un objetivo pueda tener
+  varios responsables. Ver la sección de responsables más abajo.
 
 **Las columnas viejas de cliente (texto) siguen ahí.** `proyectos_solop.cliente`
 y `key_results.cliente_asociado` conviven con las FK nuevas hasta que el
