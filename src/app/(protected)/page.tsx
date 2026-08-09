@@ -44,12 +44,36 @@ export default async function DashboardPage() {
       perfilActual(),
     ]);
 
+  // Los OKRs que lleva quien está mirando, por id: los que rinde cuentas más
+  // los que comparte. Se resuelve acá y no en el cliente para no mandarle la
+  // tabla entera de responsables al navegador.
+  let misOkrIds: string[] | null = null;
+  if (perfil) {
+    const [{ data: propios }, { data: compartidos }] = await Promise.all([
+      supabase
+        .from("okr_trimestral")
+        .select("id")
+        .eq("responsable_id", perfil.id),
+      supabase
+        .from("okr_responsables")
+        .select("okr_trimestral_id")
+        .eq("usuario_id", perfil.id)
+        .not("okr_trimestral_id", "is", null),
+    ]);
+
+    misOkrIds = [
+      ...(propios ?? []).map((o) => o.id as string),
+      ...(compartidos ?? []).map((r) => r.okr_trimestral_id as string),
+    ];
+  }
+
   return (
     <DashboardClient
       krs={krs}
       checkIns={(checkInsData ?? []) as CheckIn[]}
       proyectos={(proyectosData ?? []) as ProyectoSolop[]}
       responsableDelPerfil={perfil?.responsable ?? null}
+      misOkrIds={misOkrIds}
     />
   );
 }

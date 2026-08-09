@@ -5,6 +5,7 @@ import {
   NewOkrAnualForm,
   NewOkrTrimestralForm,
   NewPilarForm,
+  OkrAnualModal,
   OkrTrimestralModal,
 } from "@/components/OkrForms";
 import { Collapsible } from "@/components/Collapsible";
@@ -13,12 +14,15 @@ import { AlinearOkr } from "@/components/AlinearOkr";
 import { LeyendaEdicion } from "@/components/HistorialEdicion";
 import { ultimasEdiciones } from "@/lib/historial-server";
 import { hasAlertaRentabilidad, progresoPct } from "@/lib/kr-logic";
+import { Avatar } from "@/components/Avatar";
 import type {
   HitoKr,
   KeyResult,
   OkrAnual,
+  OkrResponsableConPersona,
   OkrTrimestral,
   Pilar,
+  UsuarioAutorizado,
 } from "@/lib/types";
 
 export default async function OkrsPage() {
@@ -29,11 +33,21 @@ export default async function OkrsPage() {
     { data: okrsAnuales },
     { data: okrsTrimestrales },
     { data: keyResults },
+    { data: personas },
+    { data: responsables },
   ] = await Promise.all([
     supabase.from("pilares").select("*").order("nombre"),
     supabase.from("okr_anual").select("*").order("titulo"),
     supabase.from("okr_trimestral").select("*").order("area"),
     supabase.from("key_results").select("*, hitos_kr ( * )").order("titulo"),
+    supabase
+      .from("usuarios_autorizados")
+      .select("*")
+      .eq("activo", true)
+      .order("nombre"),
+    supabase
+      .from("okr_responsables")
+      .select("*, usuarios_autorizados ( * )"),
   ]);
 
   const pilaresList = (pilares ?? []) as Pilar[];
@@ -42,6 +56,63 @@ export default async function OkrsPage() {
   const keyResultsList = (keyResults ?? []) as (KeyResult & {
     hitos_kr: HitoKr[];
   })[];
+  const personasList = (personas ?? []) as UsuarioAutorizado[];
+
+  // Co-responsables agrupados por objetivo, para no recorrer la lista entera
+  // en cada tarjeta.
+  const coPorOkr = new Map<string, OkrResponsableConPersona[]>();
+  for (const r of (responsables ?? []) as unknown as OkrResponsableConPersona[]) {
+    const clave = r.okr_trimestral_id ?? r.okr_anual_id;
+    if (!clave) continue;
+    if (!coPorOkr.has(clave)) coPorOkr.set(clave, []);
+    coPorOkr.get(clave)!.push(r);
+  }
+
+  function idsCoResponsables(okrId: string): string[] {
+    return (coPorOkr.get(okrId) ?? []).map((r) => r.usuario_id);
+  }
+
+  /** Los avatares de todos los que llevan el objetivo. El primero, con el
+   * borde marcado, es quien rinde cuentas. */
+  function ListaResponsables({
+    okrId,
+    principal,
+  }: {
+    okrId: string;
+    principal: string | null;
+  }) {
+    const gente = nombresResponsables(okrId, principal);
+    if (gente.length === 0) return null;
+
+    return (
+      <span className="ml-1.5 inline-flex flex-wrap items-center gap-1 align-middle">
+        {gente.map((p) => (
+          <span
+            key={`${p.nombre}-${p.principal}`}
+            title={p.principal ? `${p.nombre} · rinde cuentas` : p.nombre}
+            className={p.principal ? "rounded-full ring-1 ring-oxford" : undefined}
+          >
+            <Avatar nombre={p.nombre} conNombre={false} />
+          </span>
+        ))}
+      </span>
+    );
+  }
+
+  /** Todos los que llevan el objetivo: quien rinde cuentas primero. */
+  function nombresResponsables(
+    okrId: string,
+    principal: string | null
+  ): { nombre: string; principal: boolean }[] {
+    const lista: { nombre: string; principal: boolean }[] = [];
+    if (principal) lista.push({ nombre: principal, principal: true });
+    for (const r of coPorOkr.get(okrId) ?? []) {
+      const p = r.usuarios_autorizados;
+      if (!p) continue;
+      lista.push({ nombre: p.responsable?.trim() || p.nombre, principal: false });
+    }
+    return lista;
+  }
 
   const okrsAnualesPorPilar = new Map<string, OkrAnual[]>();
   const okrsAnualesSinPilar: OkrAnual[] = [];
@@ -185,14 +256,17 @@ export default async function OkrsPage() {
             )}
             {ot.titulo}{" "}
             <span className="font-normal text-tenue">
-              · {ot.trimestre} {ot.anio} · {ot.responsable}
+              · {ot.trimestre} {ot.anio}
             </span>
+            <ListaResponsables okrId={ot.id} principal={ot.responsable} />
           </p>
         }
         accion={
           <OkrTrimestralModal
             okr={ot}
             okrsAnuales={okrsAnualesList}
+            personas={personasList}
+            coResponsablesActuales={idsCoResponsables(ot.id)}
             triggerLabel="Editar"
             triggerClassName="shrink-0 rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
           />
@@ -219,15 +293,23 @@ export default async function OkrsPage() {
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-sm font-semibold">
-                {oa.titulo}{" "}
-                {oa.responsable && (
-                  <span className="font-normal text-tenue">· {oa.responsable}</span>
-                )}
+                {oa.titulo}
+                <ListaResponsables okrId={oa.id} principal={oa.responsable} />
               </p>
               <AvanceAnual krs={krsDeAnual(oa.id)} />
             </div>
             <SaludBadge krs={krsDeAnual(oa.id)} />
           </div>
+        }
+        accion={
+          <OkrAnualModal
+            okr={oa}
+            pilares={pilaresList}
+            personas={personasList}
+            coResponsablesActuales={idsCoResponsables(oa.id)}
+            triggerLabel="Editar"
+            triggerClassName="shrink-0 rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
+          />
         }
       >
         {trims.length === 0 ? (
@@ -267,7 +349,7 @@ export default async function OkrsPage() {
         <details className="rounded-lg border border-linea p-4">
           <summary className="cursor-pointer text-sm font-semibold">Nuevo OKR anual</summary>
           <div className="mt-3">
-            <NewOkrAnualForm pilares={pilaresList} />
+            <NewOkrAnualForm pilares={pilaresList} personas={personasList} />
           </div>
         </details>
         <details className="rounded-lg border border-linea p-4">
@@ -275,7 +357,7 @@ export default async function OkrsPage() {
             Nuevo OKR trimestral
           </summary>
           <div className="mt-3">
-            <NewOkrTrimestralForm okrsAnuales={okrsAnualesList} />
+            <NewOkrTrimestralForm okrsAnuales={okrsAnualesList} personas={personasList} />
           </div>
         </details>
       </div>

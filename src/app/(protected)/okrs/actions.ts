@@ -59,13 +59,63 @@ export async function createOkrAnual(
   if (!titulo) return { error: "El título es obligatorio." };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("okr_anual").insert({
-    pilar_id: optionalStr(formData, "pilar_id"),
-    titulo,
-    objetivo: optionalStr(formData, "objetivo"),
-    responsable: optionalStr(formData, "responsable"),
-  });
+  const responsableId = optionalStr(formData, "responsable_id");
+  const responsable = await nombreDeResponsable(supabase, responsableId);
+
+  const { data: creado, error } = await supabase
+    .from("okr_anual")
+    .insert({
+      pilar_id: optionalStr(formData, "pilar_id"),
+      titulo,
+      objetivo: optionalStr(formData, "objetivo"),
+      responsable_id: responsableId,
+      responsable,
+    })
+    .select("id")
+    .single();
   if (error) return { error: error.message };
+
+  await guardarCoResponsables(
+    supabase,
+    { okrAnualId: creado.id as string },
+    coResponsables(formData),
+    responsableId
+  );
+
+  revalidatePath("/okrs");
+  return undefined;
+}
+
+export async function updateOkrAnual(
+  okrAnualId: string,
+  _prevState: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const titulo = str(formData, "titulo");
+  if (!titulo) return { error: "El título es obligatorio." };
+
+  const supabase = await createClient();
+  const responsableId = optionalStr(formData, "responsable_id");
+  const responsable = await nombreDeResponsable(supabase, responsableId);
+
+  const { error } = await supabase
+    .from("okr_anual")
+    .update({
+      pilar_id: optionalStr(formData, "pilar_id"),
+      titulo,
+      objetivo: optionalStr(formData, "objetivo"),
+      responsable_id: responsableId,
+      responsable,
+    })
+    .eq("id", okrAnualId);
+  if (error) return { error: error.message };
+
+  await guardarCoResponsables(
+    supabase,
+    { okrAnualId },
+    coResponsables(formData),
+    responsableId
+  );
 
   revalidatePath("/okrs");
   return undefined;
@@ -78,10 +128,10 @@ export async function createOkrTrimestral(
   const titulo = str(formData, "titulo");
   const area = str(formData, "area");
   const trimestre = str(formData, "trimestre");
-  const responsable = str(formData, "responsable");
+  const responsableId = str(formData, "responsable_id");
 
-  if (!titulo || !area || !trimestre || !responsable) {
-    return { error: "Completá título, área, trimestre y responsable." };
+  if (!titulo || !area || !trimestre || !responsableId) {
+    return { error: "Completá título, área, trimestre y quién rinde cuentas." };
   }
 
   const esColaborativo = formData.get("es_colaborativo") === "on";
@@ -95,23 +145,112 @@ export async function createOkrTrimestral(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("okr_trimestral").insert({
-    // okr_anual_id es opcional a propósito: un área puede alinear su OKR
-    // trimestral más tarde sin bloquear el arranque del trimestre.
-    okr_anual_id: optionalStr(formData, "okr_anual_id"),
-    area,
-    titulo,
-    trimestre,
-    anio: Number(formData.get("anio")) || 2026,
-    responsable,
-    es_colaborativo: esColaborativo,
-    areas_involucradas: areas,
-  });
+  const responsable = await nombreDeResponsable(supabase, responsableId);
+  if (!responsable) {
+    return { error: "No se encontró a esa persona en la lista de accesos." };
+  }
+
+  const { data: creado, error } = await supabase
+    .from("okr_trimestral")
+    .insert({
+      // okr_anual_id es opcional a propósito: un área puede alinear su OKR
+      // trimestral más tarde sin bloquear el arranque del trimestre.
+      okr_anual_id: optionalStr(formData, "okr_anual_id"),
+      area,
+      titulo,
+      trimestre,
+      anio: Number(formData.get("anio")) || 2026,
+      responsable_id: responsableId,
+      responsable,
+      es_colaborativo: esColaborativo,
+      areas_involucradas: areas,
+    })
+    .select("id")
+    .single();
   if (error) return { error: error.message };
+
+  await guardarCoResponsables(
+    supabase,
+    { okrTrimestralId: creado.id as string },
+    coResponsables(formData),
+    responsableId
+  );
 
   revalidatePath("/okrs");
   revalidatePath("/okrs/colaborativos");
+  revalidatePath("/");
   return undefined;
+}
+
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+/** El nombre con el que se conoce a esa persona en los OKRs.
+ *
+ * Se usa para mantener sincronizada la columna de texto: la leen los
+ * informes, Scout, el resumen de la LOM y el mail de recordatorio. Mientras
+ * exista, tiene que decir lo mismo que el id. */
+async function nombreDeResponsable(
+  supabase: Supabase,
+  usuarioId: string | null
+): Promise<string | null> {
+  if (!usuarioId) return null;
+  const { data } = await supabase
+    .from("usuarios_autorizados")
+    .select("nombre, responsable")
+    .eq("id", usuarioId)
+    .maybeSingle();
+  if (!data) return null;
+  const u = data as { nombre: string; responsable: string | null };
+  return u.responsable?.trim() || u.nombre;
+}
+
+/** Sincroniza los co-responsables por diferencia, no borrando todo.
+ *
+ * Borrar y reinsertar perdería el área de los referentes cargados desde la
+ * pantalla de colaborativos, que este formulario no conoce. */
+async function guardarCoResponsables(
+  supabase: Supabase,
+  destino: { okrTrimestralId?: string; okrAnualId?: string },
+  idsElegidos: string[],
+  principalId: string | null
+) {
+  const columna = destino.okrTrimestralId ? "okr_trimestral_id" : "okr_anual_id";
+  const valor = destino.okrTrimestralId ?? destino.okrAnualId!;
+
+  // Quien rinde cuentas no va también en la lista: aparecería con el avatar
+  // duplicado en cada tarjeta.
+  const elegidos = [...new Set(idsElegidos)].filter(
+    (id) => id && id !== principalId
+  );
+
+  const { data: actuales } = await supabase
+    .from("okr_responsables")
+    .select("id, usuario_id")
+    .eq(columna, valor);
+
+  const filas = (actuales ?? []) as { id: string; usuario_id: string }[];
+
+  const aBorrar = filas
+    .filter((f) => !elegidos.includes(f.usuario_id))
+    .map((f) => f.id);
+  if (aBorrar.length > 0) {
+    await supabase.from("okr_responsables").delete().in("id", aBorrar);
+  }
+
+  const yaEstan = filas.map((f) => f.usuario_id);
+  const aAgregar = elegidos.filter((id) => !yaEstan.includes(id));
+  if (aAgregar.length > 0) {
+    await supabase
+      .from("okr_responsables")
+      .insert(aAgregar.map((usuario_id) => ({ [columna]: valor, usuario_id })));
+  }
+}
+
+function coResponsables(formData: FormData): string[] {
+  return formData
+    .getAll("co_responsables")
+    .map((v) => String(v).trim())
+    .filter(Boolean);
 }
 
 /** Las áreas involucradas viajan como checkboxes repetidos con el mismo
@@ -134,10 +273,10 @@ export async function updateOkrTrimestral(
   const titulo = str(formData, "titulo");
   const area = str(formData, "area");
   const trimestre = str(formData, "trimestre");
-  const responsable = str(formData, "responsable");
+  const responsableId = str(formData, "responsable_id");
 
-  if (!titulo || !area || !trimestre || !responsable) {
-    return { error: "Completá título, área, trimestre y responsable." };
+  if (!titulo || !area || !trimestre || !responsableId) {
+    return { error: "Completá título, área, trimestre y quién rinde cuentas." };
   }
 
   const esColaborativo = formData.get("es_colaborativo") === "on";
@@ -151,6 +290,10 @@ export async function updateOkrTrimestral(
   }
 
   const supabase = await createClient();
+  const responsable = await nombreDeResponsable(supabase, responsableId);
+  if (!responsable) {
+    return { error: "No se encontró a esa persona en la lista de accesos." };
+  }
 
   const { data: anterior } = await supabase
     .from("okr_trimestral")
@@ -164,6 +307,7 @@ export async function updateOkrTrimestral(
     titulo,
     trimestre,
     anio: Number(formData.get("anio")) || 2026,
+    responsable_id: responsableId,
     responsable,
     es_colaborativo: esColaborativo,
     areas_involucradas: areas,
@@ -174,6 +318,13 @@ export async function updateOkrTrimestral(
     .update(campos)
     .eq("id", okrId);
   if (error) return { error: error.message };
+
+  await guardarCoResponsables(
+    supabase,
+    { okrTrimestralId: okrId },
+    coResponsables(formData),
+    responsableId
+  );
 
   if (anterior) {
     await registrarCambios({ okrId }, anterior, campos);

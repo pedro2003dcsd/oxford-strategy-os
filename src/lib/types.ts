@@ -59,7 +59,10 @@ export interface OkrAnual {
   pilar_id: string | null;
   titulo: string;
   objetivo: string | null;
+  /** Nombre de quien rinde cuentas. Se mantiene sincronizado con
+   * responsable_id: lo leen los informes, Scout y el mail de recordatorio. */
   responsable: string | null;
+  responsable_id: string | null;
   es_colaborativo: boolean;
   areas_involucradas: Area[];
   created_at: string;
@@ -72,9 +75,10 @@ export interface OkrTrimestral {
   titulo: string;
   trimestre: Trimestre;
   anio: number;
-  /** Responsable principal. En los colaborativos, el que rinde cuentas;
-   * los demás involucrados salen de areas_involucradas. */
+  /** Nombre de quien rinde cuentas, sincronizado con responsable_id. Los
+   * demás responsables salen de okr_responsables. */
   responsable: string;
+  responsable_id: string | null;
   es_colaborativo: boolean;
   areas_involucradas: Area[];
   created_at: string;
@@ -355,11 +359,18 @@ export interface Evaluacion360 {
  * okr_trimestral.responsable, que sigue siendo quien rinde cuentas. */
 export interface OkrResponsable {
   id: string;
-  okr_trimestral_id: string;
+  /** Uno de los dos, nunca los dos. Ver la migración 0014. */
+  okr_trimestral_id: string | null;
+  okr_anual_id: string | null;
   usuario_id: string;
-  area: Area;
+  /** Solo tiene sentido en un OKR colaborativo: por qué área entra. */
+  area: Area | null;
   creado_at: string;
 }
+
+export type OkrResponsableConPersona = OkrResponsable & {
+  usuarios_autorizados: UsuarioAutorizado | null;
+};
 
 export interface OkrColaborativo extends OkrTrimestral {
   okr_responsables?: (OkrResponsable & {

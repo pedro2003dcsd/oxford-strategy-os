@@ -76,6 +76,7 @@ export function DashboardClient({
   checkIns = [],
   proyectos = [],
   responsableDelPerfil = null,
+  misOkrIds = null,
 }: {
   krs: KeyResultCompleto[];
   checkIns?: CheckIn[];
@@ -83,6 +84,13 @@ export function DashboardClient({
   /** Viene de la cuenta con la que se entró. Si está, manda sobre el
    * selector manual: nadie tiene que decir quién es si ya se logueó. */
   responsableDelPerfil?: string | null;
+  /** Los OKRs trimestrales que lleva quien está mirando, resueltos por id
+   * en el servidor: como principal o compartiendo el objetivo.
+   *
+   * Antes esto se resolvía comparando el nombre escrito en el OKR contra el
+   * de la lista de accesos. Un "Ayelén" contra un "Ayelén Bruno" devolvía
+   * cero objetivos sin dar ningún error. */
+  misOkrIds?: string[] | null;
 }) {
   const [trimestre, setTrimestre] = useState<(typeof TRIM_OPTIONS)[number]>("Todos");
   const [area, setArea] = useState<(typeof AREA_OPTIONS)[number]>("Todas");
@@ -136,17 +144,26 @@ export function DashboardClient({
       return Boolean(p && (tieneAlertaRentabilidad(p) || advertenciaHoras(p)));
     }
 
+    /** Con la cuenta resuelta se cruza por id. El nombre queda solo como
+     * respaldo para quien todavía no está vinculado en la lista de accesos. */
+    function esMio(kr: KeyResultCompleto): boolean {
+      if (misOkrIds) {
+        const okrId = kr.okr_trimestral?.id;
+        return Boolean(okrId && misOkrIds.includes(okrId));
+      }
+      return Boolean(yo) && kr.okr_trimestral?.responsable === yo;
+    }
+
     const base = krs.filter((kr) => {
       if (trimestre !== "Todos" && kr.okr_trimestral?.trimestre !== trimestre)
         return false;
       if (area !== "Todas" && kr.okr_trimestral?.area !== area) return false;
-      if (misObjetivos && yo && kr.okr_trimestral?.responsable !== yo)
-        return false;
+      if (misObjetivos && !esMio(kr)) return false;
       return true;
     });
 
     return { filtrados: base, visibles: soloAlertas ? base.filter(enAlerta) : base };
-  }, [krs, trimestre, area, misObjetivos, yo, soloAlertas, proyectoPorKr]);
+  }, [krs, trimestre, area, misObjetivos, yo, misOkrIds, soloAlertas, proyectoPorKr]);
 
   const counts = useMemo(
     () =>

@@ -5,12 +5,19 @@ import {
   createOkrAnual,
   createOkrTrimestral,
   createPilar,
+  updateOkrAnual,
   updateOkrTrimestral,
   type FormActionState,
 } from "@/app/(protected)/okrs/actions";
 import { Modal } from "@/components/Modal";
 import { AREAS, TRIMESTRES } from "@/lib/types";
-import type { Area, OkrAnual, OkrTrimestral, Pilar } from "@/lib/types";
+import type {
+  Area,
+  OkrAnual,
+  OkrTrimestral,
+  Pilar,
+  UsuarioAutorizado,
+} from "@/lib/types";
 
 const inputClass =
   "w-full rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm";
@@ -50,7 +57,13 @@ export function NewPilarForm() {
   );
 }
 
-export function NewOkrAnualForm({ pilares }: { pilares: Pilar[] }) {
+export function NewOkrAnualForm({
+  pilares,
+  personas,
+}: {
+  pilares: Pilar[];
+  personas: UsuarioAutorizado[];
+}) {
   const [state, formAction, pending] = useActionState<FormActionState, FormData>(
     createOkrAnual,
     undefined
@@ -75,15 +88,107 @@ export function NewOkrAnualForm({ pilares }: { pilares: Pilar[] }) {
         <label className={labelClass}>Objetivo</label>
         <textarea name="objetivo" rows={2} className={inputClass} />
       </div>
-      <div className="space-y-1">
-        <label className={labelClass}>Responsable</label>
-        <input name="responsable" className={inputClass} />
-      </div>
+      <SelectorResponsables personas={personas} />
       <ErrorText state={state} />
       <button type="submit" disabled={pending} className={submitClass}>
         {pending ? "Creando…" : "Crear OKR anual"}
       </button>
     </form>
+  );
+}
+
+/** Cómo se nombra a una persona en el selector.
+ *
+ * Manda `nombre`, que es la identidad: `responsable` es el alias con el que
+ * figura en los OKRs y dos personas pueden compartirlo, con lo cual el
+ * desplegable mostraría dos opciones idénticas. Cuando difieren, el alias
+ * va entre paréntesis para poder reconocerlo. */
+function etiquetaPersona(p: UsuarioAutorizado): string {
+  const alias = p.responsable?.trim();
+  if (!alias || alias === p.nombre) return p.nombre;
+  return `${p.nombre} (${alias})`;
+}
+
+/** Quién rinde cuentas, más los que comparten el objetivo.
+ *
+ * El principal sale por id y no por texto: hasta ahora se tipeaba a mano y
+ * el filtro de "Mis Objetivos" comparaba ese texto con un igual exacto, así
+ * que un "Ayelén" contra un "Ayelén Bruno" dejaba el objetivo sin dueño sin
+ * avisar nada.
+ *
+ * Los co-responsables se excluyen del principal en vivo: tenerlo en las dos
+ * listas duplicaría su avatar en cada tarjeta. */
+function SelectorResponsables({
+  personas,
+  principalPorDefecto = "",
+  coPorDefecto = [],
+}: {
+  personas: UsuarioAutorizado[];
+  principalPorDefecto?: string;
+  coPorDefecto?: string[];
+}) {
+  const [principal, setPrincipal] = useState(principalPorDefecto);
+  const [co, setCo] = useState<string[]>(coPorDefecto);
+
+  function alternar(id: string, marcado: boolean) {
+    setCo((prev) => (marcado ? [...prev, id] : prev.filter((x) => x !== id)));
+  }
+
+  const otros = personas.filter((p) => p.id !== principal);
+  const elegidos = co.filter((id) => id !== principal);
+
+  return (
+    <div className="space-y-2">
+      <div className="space-y-1">
+        <label className={labelClass}>Quién rinde cuentas</label>
+        <select
+          name="responsable_id"
+          required
+          value={principal}
+          onChange={(e) => setPrincipal(e.target.value)}
+          className={inputClass}
+        >
+          <option value="" disabled>
+            Elegí una persona
+          </option>
+          {personas.map((p) => (
+            <option key={p.id} value={p.id}>
+              {etiquetaPersona(p)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-1 rounded-md border border-linea p-2.5">
+        <label className={labelClass}>
+          Además es de… {elegidos.length > 0 && `· ${elegidos.length}`}
+        </label>
+        <p className="text-xs text-tenue">
+          El objetivo aparece en “Mis Objetivos” de todos los que marques.
+        </p>
+        {otros.length === 0 ? (
+          <p className="pt-1 text-xs text-tenue">
+            No hay otras personas cargadas en la lista de accesos.
+          </p>
+        ) : (
+          <div className="grid max-h-40 gap-1 overflow-y-auto pt-1 sm:grid-cols-2">
+            {otros.map((p) => (
+              <label key={p.id} className="flex items-center gap-1.5 text-xs">
+                <input
+                  type="checkbox"
+                  name="co_responsables"
+                  value={p.id}
+                  checked={elegidos.includes(p.id)}
+                  onChange={(e) => alternar(p.id, e.target.checked)}
+                  className="accent-oxford"
+                />
+                {etiquetaPersona(p)}
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -159,11 +264,15 @@ function CamposColaborativos({
 export function OkrTrimestralModal({
   okr,
   okrsAnuales,
+  personas,
+  coResponsablesActuales,
   triggerLabel,
   triggerClassName,
 }: {
   okr: OkrTrimestral;
   okrsAnuales: OkrAnual[];
+  personas: UsuarioAutorizado[];
+  coResponsablesActuales: string[];
   triggerLabel: string;
   triggerClassName: string;
 }) {
@@ -177,6 +286,8 @@ export function OkrTrimestralModal({
         <EditOkrTrimestralForm
           okr={okr}
           okrsAnuales={okrsAnuales}
+          personas={personas}
+          coResponsablesActuales={coResponsablesActuales}
           onDone={cerrar}
         />
       )}
@@ -184,13 +295,121 @@ export function OkrTrimestralModal({
   );
 }
 
+export function OkrAnualModal({
+  okr,
+  pilares,
+  personas,
+  coResponsablesActuales,
+  triggerLabel,
+  triggerClassName,
+}: {
+  okr: OkrAnual;
+  pilares: Pilar[];
+  personas: UsuarioAutorizado[];
+  coResponsablesActuales: string[];
+  triggerLabel: string;
+  triggerClassName: string;
+}) {
+  return (
+    <Modal
+      titulo="Editar OKR anual"
+      triggerLabel={triggerLabel}
+      triggerClassName={triggerClassName}
+    >
+      {(cerrar) => (
+        <EditOkrAnualForm
+          okr={okr}
+          pilares={pilares}
+          personas={personas}
+          coResponsablesActuales={coResponsablesActuales}
+          onDone={cerrar}
+        />
+      )}
+    </Modal>
+  );
+}
+
+function EditOkrAnualForm({
+  okr,
+  pilares,
+  personas,
+  coResponsablesActuales,
+  onDone,
+}: {
+  okr: OkrAnual;
+  pilares: Pilar[];
+  personas: UsuarioAutorizado[];
+  coResponsablesActuales: string[];
+  onDone: () => void;
+}) {
+  const [state, formAction, pending] = useActionState<FormActionState, FormData>(
+    async (prev, formData) => {
+      const result = await updateOkrAnual(okr.id, prev, formData);
+      if (!result?.error) onDone();
+      return result;
+    },
+    undefined
+  );
+
+  return (
+    <form action={formAction} className="space-y-2">
+      <div className="space-y-1">
+        <label className={labelClass}>Pilar</label>
+        <select
+          name="pilar_id"
+          defaultValue={okr.pilar_id ?? ""}
+          className={inputClass}
+        >
+          <option value="">Sin pilar</option>
+          {pilares.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.nombre}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="space-y-1">
+        <label className={labelClass}>Título</label>
+        <input
+          name="titulo"
+          required
+          defaultValue={okr.titulo}
+          className={inputClass}
+        />
+      </div>
+      <div className="space-y-1">
+        <label className={labelClass}>Objetivo</label>
+        <textarea
+          name="objetivo"
+          rows={2}
+          defaultValue={okr.objetivo ?? ""}
+          className={inputClass}
+        />
+      </div>
+      <SelectorResponsables
+        personas={personas}
+        principalPorDefecto={okr.responsable_id ?? ""}
+        coPorDefecto={coResponsablesActuales}
+      />
+      <ErrorText state={state} />
+      <button type="submit" disabled={pending} className={submitClass}>
+        {pending ? "Guardando…" : "Guardar cambios"}
+      </button>
+    </form>
+  );
+}
+
 export function EditOkrTrimestralForm({
   okr,
   okrsAnuales,
+  personas,
+  coResponsablesActuales,
   onDone,
 }: {
   okr: OkrTrimestral;
   okrsAnuales: OkrAnual[];
+  personas: UsuarioAutorizado[];
+  coResponsablesActuales: string[];
   onDone?: () => void;
 }) {
   const [state, formAction, pending] = useActionState<FormActionState, FormData>(
@@ -259,15 +478,11 @@ export function EditOkrTrimestralForm({
           />
         </div>
       </div>
-      <div className="space-y-1">
-        <label className={labelClass}>Responsable que rinde cuentas</label>
-        <input
-          name="responsable"
-          required
-          defaultValue={okr.responsable}
-          className={inputClass}
-        />
-      </div>
+      <SelectorResponsables
+        personas={personas}
+        principalPorDefecto={okr.responsable_id ?? ""}
+        coPorDefecto={coResponsablesActuales}
+      />
       <CamposColaborativos
         defaultChecked={okr.es_colaborativo}
         defaultAreas={okr.areas_involucradas ?? []}
@@ -280,7 +495,13 @@ export function EditOkrTrimestralForm({
   );
 }
 
-export function NewOkrTrimestralForm({ okrsAnuales }: { okrsAnuales: OkrAnual[] }) {
+export function NewOkrTrimestralForm({
+  okrsAnuales,
+  personas,
+}: {
+  okrsAnuales: OkrAnual[];
+  personas: UsuarioAutorizado[];
+}) {
   const [state, formAction, pending] = useActionState<FormActionState, FormData>(
     createOkrTrimestral,
     undefined
@@ -336,10 +557,7 @@ export function NewOkrTrimestralForm({ okrsAnuales }: { okrsAnuales: OkrAnual[] 
           <input name="anio" type="number" defaultValue={2026} className={inputClass} />
         </div>
       </div>
-      <div className="space-y-1">
-        <label className={labelClass}>Responsable</label>
-        <input name="responsable" required className={inputClass} />
-      </div>
+      <SelectorResponsables personas={personas} />
       <CamposColaborativos />
       <ErrorText state={state} />
       <button type="submit" disabled={pending} className={submitClass}>

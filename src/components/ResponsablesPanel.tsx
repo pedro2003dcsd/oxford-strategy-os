@@ -54,7 +54,10 @@ export function ResponsablesPanel({
             <Avatar nombre={r.usuarios_autorizados?.nombre ?? "?"} />
             <span>
               {r.usuarios_autorizados?.nombre ?? "—"}
-              <span className="text-tenue"> · {r.area}</span>
+              {/* El área es opcional desde 0014: solo la tienen los
+                  referentes cargados desde acá, no los co-responsables que
+                  se marcan en el formulario del OKR. */}
+              {r.area && <span className="text-tenue"> · {r.area}</span>}
             </span>
             <button
               type="button"
