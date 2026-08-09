@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { puedeEscribir, vetoDeEscritura } from "@/lib/permisos";
 import { perfilActual } from "@/lib/perfil";
 
 export type CompromisoState = { error?: string } | undefined;
@@ -11,6 +12,9 @@ export async function addCompromisoLom(
   _prevState: CompromisoState,
   formData: FormData
 ): Promise<CompromisoState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const descripcion = String(formData.get("descripcion") ?? "").trim();
   const responsable = String(formData.get("responsable") ?? "").trim();
   const fechaLimite = String(formData.get("fecha_limite") ?? "").trim();
@@ -32,6 +36,8 @@ export async function addCompromisoLom(
 }
 
 export async function toggleCompromisoLom(compromisoId: string, cumplido: boolean) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
   await supabase
     .from("compromisos_lom")
@@ -48,6 +54,9 @@ export async function upsertActa(
   _prevState: CompromisoState,
   formData: FormData
 ): Promise<CompromisoState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const titulo = String(formData.get("titulo") ?? "").trim();
   if (!titulo) return { error: "Ponele un título al acta." };
 
@@ -80,6 +89,8 @@ export async function upsertActa(
 }
 
 export async function deleteActa(actaId: string) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
   await supabase.from("actas_directorio").delete().eq("id", actaId);
   revalidatePath("/lom");

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { puedeEscribir, vetoDeEscritura } from "@/lib/permisos";
 
 export type CheckInState = { error?: string } | undefined;
 
@@ -10,6 +11,9 @@ export async function addCheckIn(
   _prevState: CheckInState,
   formData: FormData
 ): Promise<CheckInState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const usuario = String(formData.get("usuario") ?? "").trim();
   const valorRaw = formData.get("valor_registrado");
   const estado = String(formData.get("estado_semaforo") ?? "");
@@ -42,6 +46,8 @@ export async function addCheckIn(
 }
 
 export async function toggleHito(hitoId: string, krId: string, cumplido: boolean) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
   await supabase.from("hitos_kr").update({ cumplido }).eq("id", hitoId);
   revalidatePath(`/kr/${krId}`);
@@ -55,6 +61,9 @@ export async function updateMargen(
   _prevState: MargenState,
   formData: FormData
 ): Promise<MargenState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const margenRaw = formData.get("margen_actual_pct");
   const margen = margenRaw === "" ? null : Number(margenRaw);
 

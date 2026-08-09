@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { vetoDeEscritura } from "@/lib/permisos";
 
 export type ExpressState = { error?: string; ok?: boolean } | undefined;
 
@@ -10,6 +11,9 @@ export async function submitCheckInExpress(
   _prevState: ExpressState,
   formData: FormData
 ): Promise<ExpressState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const usuario = String(formData.get("usuario") ?? "").trim();
   const estado = String(formData.get("estado_semaforo") ?? "");
   const comentario = String(formData.get("comentario_bloqueos") ?? "").trim();

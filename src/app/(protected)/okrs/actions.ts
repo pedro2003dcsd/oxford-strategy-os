@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { puedeEscribir, vetoDeEscritura } from "@/lib/permisos";
 import { registrarCambios } from "@/lib/historial-server";
 import type { Area } from "@/lib/types";
 
@@ -23,6 +24,8 @@ export async function alinearOkrTrimestral(
   okrTrimestralId: string,
   okrAnualId: string | null
 ) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
   await supabase
     .from("okr_trimestral")
@@ -36,6 +39,9 @@ export async function createPilar(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const nombre = str(formData, "nombre");
   if (!nombre) return { error: "El nombre del pilar es obligatorio." };
 
@@ -55,6 +61,9 @@ export async function createOkrAnual(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const titulo = str(formData, "titulo");
   if (!titulo) return { error: "El título es obligatorio." };
 
@@ -91,6 +100,9 @@ export async function updateOkrAnual(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const titulo = str(formData, "titulo");
   if (!titulo) return { error: "El título es obligatorio." };
 
@@ -125,6 +137,9 @@ export async function createOkrTrimestral(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const titulo = str(formData, "titulo");
   const area = str(formData, "area");
   const trimestre = str(formData, "trimestre");
@@ -270,6 +285,9 @@ export async function updateOkrTrimestral(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const titulo = str(formData, "titulo");
   const area = str(formData, "area");
   const trimestre = str(formData, "trimestre");
@@ -340,6 +358,9 @@ export async function agregarResponsable(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const okrTrimestralId = str(formData, "okr_trimestral_id");
   const usuarioId = str(formData, "usuario_id");
   const area = str(formData, "area");
@@ -362,6 +383,8 @@ export async function agregarResponsable(
 }
 
 export async function quitarResponsable(responsableId: string) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
   await supabase.from("okr_responsables").delete().eq("id", responsableId);
   revalidatePath("/okrs/colaborativos");
@@ -371,6 +394,9 @@ export async function createKeyResult(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const okrTrimestralId = str(formData, "okr_trimestral_id");
   const titulo = str(formData, "titulo");
   const tipoMedicion = str(formData, "tipo_medicion");
@@ -424,6 +450,9 @@ export async function updateKeyResult(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const titulo = str(formData, "titulo");
   const tipoMedicion = str(formData, "tipo_medicion");
 

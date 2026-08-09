@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { puedeEscribir, vetoDeEscritura } from "@/lib/permisos";
 import { ESTADOS_INICIATIVA, type EstadoIniciativa } from "@/lib/types";
 
 export type IniciativaState = { error?: string } | undefined;
@@ -19,6 +20,9 @@ export async function addIniciativa(
   _prevState: IniciativaState,
   formData: FormData
 ): Promise<IniciativaState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const titulo = String(formData.get("titulo") ?? "").trim();
   const responsable = String(formData.get("responsable") ?? "").trim();
   const fechaLimite = String(formData.get("fecha_limite") ?? "").trim();
@@ -60,6 +64,8 @@ export async function setEstadoIniciativa(
   krId: string,
   estado: EstadoIniciativa
 ) {
+  if (!(await puedeEscribir())) return;
+
   if (!ESTADOS_INICIATIVA.includes(estado)) return;
 
   const supabase = await createClient();
@@ -77,6 +83,8 @@ export async function toggleIniciativa(
   krId: string,
   completado: boolean
 ) {
+  if (!(await puedeEscribir())) return;
+
   await setEstadoIniciativa(
     iniciativaId,
     krId,
@@ -85,6 +93,8 @@ export async function toggleIniciativa(
 }
 
 export async function deleteIniciativa(iniciativaId: string, krId: string) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
   await supabase.from("iniciativas").delete().eq("id", iniciativaId);
   revalidarVistas(krId);
@@ -97,6 +107,9 @@ export async function updateLinkTrabajo(
   _prevState: LinkTrabajoState,
   formData: FormData
 ): Promise<LinkTrabajoState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const link = String(formData.get("link_trabajo") ?? "").trim();
 
   if (link && !/^https?:\/\//i.test(link)) {

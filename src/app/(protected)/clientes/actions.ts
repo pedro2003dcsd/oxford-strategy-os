@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { puedeEscribir, vetoDeEscritura } from "@/lib/permisos";
 
 export type FormActionState = { error?: string } | undefined;
 
@@ -41,6 +42,9 @@ export async function createCliente(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const nombre = str(formData, "nombre");
   if (!nombre) return { error: "El nombre del cliente es obligatorio." };
 
@@ -75,6 +79,9 @@ export async function updateCliente(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const nombre = str(formData, "nombre");
   if (!nombre) return { error: "El nombre del cliente es obligatorio." };
 
@@ -107,6 +114,9 @@ export async function updateCliente(
 }
 
 export async function deleteCliente(clienteId: string): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const supabase = await createClient();
   const { error } = await supabase.from("clientes").delete().eq("id", clienteId);
 
@@ -134,6 +144,9 @@ export async function addSquadMiembro(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const clienteId = str(formData, "cliente_id");
   const nombre = str(formData, "nombre");
   const rolSquad = str(formData, "rol_squad");
@@ -166,6 +179,8 @@ export async function addSquadMiembro(
 }
 
 export async function removeSquadMiembro(miembroId: string) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
   await supabase.from("squad_miembros").delete().eq("id", miembroId);
   revalidarClientes();
@@ -179,6 +194,9 @@ export async function upsertMetrica(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const clienteId = str(formData, "cliente_id");
   const titulo = str(formData, "titulo");
   const nivel = Number(formData.get("nivel"));
@@ -219,6 +237,8 @@ export async function upsertMetrica(
 }
 
 export async function deleteMetrica(metricaId: string) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
   await supabase.from("metricas_cliente").delete().eq("id", metricaId);
   revalidarClientes();

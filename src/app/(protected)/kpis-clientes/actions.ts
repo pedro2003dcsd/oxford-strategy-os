@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { puedeEscribir, vetoDeEscritura } from "@/lib/permisos";
 import type { ItemEvaluacion, KpiCalidad, PuntoTendencia } from "@/lib/types";
 
 export type FormActionState = { error?: string } | undefined;
@@ -74,6 +75,9 @@ export async function upsertEvaluacion(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const clienteId = str(formData, "cliente_id");
   const periodo = str(formData, "periodo");
 
@@ -107,6 +111,8 @@ export async function upsertEvaluacion(
 }
 
 export async function deleteEvaluacion(evaluacionId: string) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
   await supabase.from("evaluaciones_360").delete().eq("id", evaluacionId);
   revalidatePath("/kpis-clientes");

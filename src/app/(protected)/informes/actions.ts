@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { puedeEscribir, vetoDeEscritura } from "@/lib/permisos";
 
 export type GuardarInformeState = { error?: string; ok?: boolean } | undefined;
 
@@ -12,6 +13,9 @@ export async function guardarInforme(
   _prevState: GuardarInformeState,
   formData: FormData
 ): Promise<GuardarInformeState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const markdown = String(formData.get("markdown") ?? "").trim();
   const tipoReporte = String(formData.get("tipo_reporte") ?? "").trim();
   const titulo = String(formData.get("titulo") ?? "").trim();
@@ -42,6 +46,8 @@ export async function guardarInforme(
 }
 
 export async function borrarInforme(id: string) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
   await supabase.from("informes_guardados").delete().eq("id", id);
   revalidatePath("/informes");

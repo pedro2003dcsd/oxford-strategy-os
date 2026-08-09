@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { puedeEscribir, vetoDeEscritura } from "@/lib/permisos";
 
 export type SolopState = { error?: string } | undefined;
 
@@ -13,6 +14,8 @@ function num(formData: FormData, key: string): number {
 /** Asocia (o desasocia) un KR desde la fila de la tabla, sin abrir el modal.
  * Si queda asociado y hay facturación cargada, arrastra el margen al KR. */
 export async function asignarKrAProyecto(proyectoId: string, krId: string | null) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
 
   const { data: proyecto } = await supabase
@@ -53,6 +56,9 @@ export async function upsertProyectoSolop(
   _prevState: SolopState,
   formData: FormData
 ): Promise<SolopState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const cliente = String(formData.get("cliente") ?? "").trim();
   const tipoContrato = String(formData.get("tipo_contrato") ?? "");
   const krId = String(formData.get("kr_id") ?? "").trim() || null;

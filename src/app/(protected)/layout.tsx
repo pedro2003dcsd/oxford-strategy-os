@@ -23,6 +23,18 @@ export default async function ProtectedLayout({
           </Link>
         </div>
       </header>
+      {/* Los botones de guardar siguen a la vista, así que sin este aviso la
+          persona descubre que no puede escribir recién al chocarse con el
+          error. Decirlo antes es más barato que esconder cada control. */}
+      {perfil?.rol === "lectura" && (
+        <div className="border-b border-amber-500/40 bg-amber-500/10">
+          <p className="mx-auto max-w-6xl px-4 py-2 text-sm text-amber-900 dark:text-amber-200 sm:px-6">
+            <span className="font-semibold">Modo solo lectura.</span> Podés ver
+            todo, pero no guardar cambios. Si necesitás cargar datos, pedile a
+            Dirección que te cambie el rol desde la pantalla Equipo.
+          </p>
+        </div>
+      )}
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
         {children}
       </main>

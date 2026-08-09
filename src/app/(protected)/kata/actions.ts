@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { puedeEscribir, vetoDeEscritura } from "@/lib/permisos";
 
 export type FormActionState = { error?: string } | undefined;
 
@@ -21,6 +22,9 @@ export async function upsertCondicion(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const clienteId = str(formData, "cliente_id");
   const titulo = str(formData, "titulo");
 
@@ -59,6 +63,8 @@ export async function upsertCondicion(
 }
 
 export async function deleteCondicion(condicionId: string) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
   // Los experimentos se van con ella: on delete cascade en pdca_experimentos.
   await supabase.from("kata_condiciones").delete().eq("id", condicionId);
@@ -73,6 +79,9 @@ export async function upsertExperimento(
   _prevState: FormActionState,
   formData: FormData
 ): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
   const condicionId = str(formData, "condicion_id");
   const hipotesis = str(formData, "hipotesis");
 
@@ -108,6 +117,8 @@ export async function cambiarEstadoExperimento(
   experimentoId: string,
   estado: string
 ) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
   await supabase
     .from("pdca_experimentos")
@@ -117,6 +128,8 @@ export async function cambiarEstadoExperimento(
 }
 
 export async function deleteExperimento(experimentoId: string) {
+  if (!(await puedeEscribir())) return;
+
   const supabase = await createClient();
   await supabase.from("pdca_experimentos").delete().eq("id", experimentoId);
   revalidatePath("/kata");

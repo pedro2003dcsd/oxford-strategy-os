@@ -113,6 +113,29 @@ La tabla `usuarios_autorizados` es la única puerta. Hace de lista blanca y de
 perfil en la misma fila: email, nombre, responsable de OKRs y rol
 (`direccion`, `lider`, `lectura`).
 
+### El rol `lectura` restringe de verdad
+
+Desde el 9 de agosto de 2026. Antes el nombre prometía algo que la app no
+cumplía: el rol se chequeaba únicamente en la pantalla Equipo y todas las
+tablas tenían `authenticated full access`, así que una cuenta "Solo lectura"
+podía crear, editar y borrar cualquier cosa.
+
+Se cierra en dos capas, y las dos hacen falta:
+
+- **RLS (`0015`).** Leer queda abierto a cualquier autenticado; insertar,
+  modificar y borrar exigen `puede_escribir()`. Es la capa que no se puede
+  saltear llamando a la API directo.
+- **Guard en las Server Actions** (`src/lib/permisos.ts`). No es cosmético:
+  un UPDATE o un DELETE bloqueados por RLS **no dan error**, afectan cero
+  filas en silencio. Sin el guard, la pantalla diría "guardado" sin haber
+  guardado nada.
+
+Los formularios devuelven un mensaje claro. Las acciones sin retorno, como
+tildar un compromiso, cortan sin avisar: la tilde se mueve en pantalla y
+vuelve a su valor real al recargar. **Los controles de escritura siguen a la
+vista para el rol lectura**; lo que hay es un aviso arriba de todo. Esconder
+cada botón queda pendiente.
+
 Decisiones que conviene no revertir sin pensarlo:
 
 - El control vive en `proxy.ts`, así también cubre las rutas de API.
@@ -184,6 +207,9 @@ Migraciones en `supabase/migrations/`:
 - `0014_responsables_por_id.sql` — `responsable_id` en los dos niveles de
   OKR, y `okr_responsables` generalizada para que un objetivo pueda tener
   varios responsables. Ver la sección de responsables más abajo.
+- `0015_solo_lectura.sql` — la función `puede_escribir()` y las políticas que
+  hacen que el rol `lectura` no pueda escribir en ninguna tabla. Reemplaza
+  el `authenticated full access` de las 18 tablas de datos.
 
 **Las columnas viejas de cliente (texto) siguen ahí.** `proyectos_solop.cliente`
 y `key_results.cliente_asociado` conviven con las FK nuevas hasta que el
@@ -285,9 +311,12 @@ El guion para presentarlo está en `GUION-DEMO-PROTOTIPO.md`.
 Decidido el 6 de agosto de 2026: **se pospuso a propósito.** Se puede dar
 acceso a un cliente externo recién cuando estén las tres cosas, juntas:
 
-1. **Reescribir las políticas RLS de todas las tablas a la vez**, incluidas
-   las de `0001` y `0003`. Si queda una sola con `authenticated full access`,
-   el aislamiento no existe: por esa tabla se ve todo el resto.
+1. **Filtrar la lectura por cliente.** La mitad de este trabajo ya está hecha
+   en `0015`: las 18 tablas dejaron atrás el `authenticated full access` y
+   tienen políticas separadas por operación, con la función
+   `puede_escribir()` como patrón a copiar. Lo que falta es la política de
+   SELECT, que hoy sigue abierta a cualquier autenticado. Un usuario externo
+   tiene que ver solo su cuenta.
 2. **Invertir el fail-open de `proxy.ts`.** Hoy, ante un error de base, deja
    pasar. Fue la decisión correcta mientras adentro solo hubiera equipo, pero
    con gente externa significa que un hipo de Supabase abre la app entera.
