@@ -18,7 +18,7 @@ import type {
 } from "@/lib/types";
 
 const inputClass =
-  "w-full rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm";
+  "w-full rounded-md border border-linea bg-panel px-2 py-1.5 text-sm";
 const labelClass = "text-xs font-medium text-tenue";
 
 const TIPO_LABELS: Record<TipoMedicion, string> = {
@@ -133,7 +133,11 @@ export function KrModal({
                       Elegí un OKR trimestral
                     </option>
                     {agruparPorArea(okrsTrimestrales ?? []).map(([area, lista]) => (
-                      <optgroup key={area} label={area}>
+                      <optgroup
+                        key={area}
+                        label={area}
+                        className="bg-panel font-semibold text-tenue"
+                      >
                         {lista.map((o) => (
                           <option key={o.id} value={o.id}>
                             {o.es_colaborativo ? "🤝 " : ""}
