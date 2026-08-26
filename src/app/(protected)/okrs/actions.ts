@@ -219,6 +219,23 @@ async function nombreDeResponsable(
   return u.responsable?.trim() || u.nombre;
 }
 
+/** Nombre del cliente, para mantener sincronizada la columna de texto.
+ *
+ * cliente_asociado la siguen leyendo Scout, los informes y la Estrella
+ * Polar. Mientras exista, tiene que decir lo mismo que cliente_id. */
+async function nombreDeCliente(
+  supabase: Supabase,
+  clienteId: string | null
+): Promise<string | null> {
+  if (!clienteId) return null;
+  const { data } = await supabase
+    .from("clientes")
+    .select("nombre")
+    .eq("id", clienteId)
+    .maybeSingle();
+  return (data as { nombre: string } | null)?.nombre ?? null;
+}
+
 /** Sincroniza los co-responsables por diferencia, no borrando todo.
  *
  * Borrar y reinsertar perdería el área de los referentes cargados desde la
@@ -411,6 +428,9 @@ export async function createKeyResult(
   }
 
   const supabase = await createClient();
+  const clienteId = optionalStr(formData, "cliente_id");
+  const clienteNombre = await nombreDeCliente(supabase, clienteId);
+
   const { data: created, error } = await supabase
     .from("key_results")
     .insert({
@@ -419,7 +439,8 @@ export async function createKeyResult(
       tipo_medicion: tipoMedicion,
       valor_inicial: Number(formData.get("valor_inicial")) || 0,
       valor_meta: tipoMedicion === "hitos" ? 1 : valorMeta,
-      cliente_asociado: optionalStr(formData, "cliente_asociado"),
+      cliente_id: clienteId,
+      cliente_asociado: clienteNombre,
       margen_utilidad_esperado:
         Number(formData.get("margen_utilidad_esperado")) || 65.0,
     })
@@ -475,12 +496,16 @@ export async function updateKeyResult(
     .eq("id", krId)
     .maybeSingle();
 
+  const clienteId = optionalStr(formData, "cliente_id");
+  const clienteNombre = await nombreDeCliente(supabase, clienteId);
+
   const campos = {
     titulo,
     tipo_medicion: tipoMedicion,
     valor_inicial: Number(formData.get("valor_inicial")) || 0,
     valor_meta: tipoMedicion === "hitos" ? 1 : valorMeta,
-    cliente_asociado: optionalStr(formData, "cliente_asociado"),
+    cliente_id: clienteId,
+    cliente_asociado: clienteNombre,
     margen_utilidad_esperado:
       Number(formData.get("margen_utilidad_esperado")) || 65.0,
   };

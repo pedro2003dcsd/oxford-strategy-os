@@ -43,10 +43,23 @@ export function KrCard({
 
       {responsable && <Avatar nombre={responsable} />}
 
+      {/* El objetivo va arriba del KR y legible, no en gris al pie: la
+          primera persona que probó la app tardó tres horas en darse cuenta
+          de que el objetivo estaba escrito ahí. */}
       {kr.okr_trimestral && (
-        <p className="text-xs text-tenue">
-          {kr.okr_trimestral.titulo} · {kr.okr_trimestral.trimestre}{" "}
-          {kr.okr_trimestral.anio}
+        <p className="flex flex-wrap items-center gap-1.5 text-xs">
+          {kr.okr_trimestral.es_colaborativo && (
+            <span
+              title="Objetivo colaborativo, de varias áreas"
+              className="rounded bg-oxford-suave px-1.5 py-0.5 font-semibold text-oxford"
+            >
+              🤝 Colaborativo
+            </span>
+          )}
+          <span className="font-medium">{kr.okr_trimestral.titulo}</span>
+          <span className="text-tenue">
+            · {kr.okr_trimestral.trimestre} {kr.okr_trimestral.anio}
+          </span>
         </p>
       )}
 

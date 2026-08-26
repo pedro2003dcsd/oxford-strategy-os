@@ -9,7 +9,13 @@ import {
   type FormActionState,
 } from "@/app/(protected)/okrs/actions";
 import { TIPOS_MEDICION } from "@/lib/types";
-import type { HitoKr, KeyResult, OkrTrimestral, TipoMedicion } from "@/lib/types";
+import type {
+  Cliente,
+  HitoKr,
+  KeyResult,
+  OkrTrimestral,
+  TipoMedicion,
+} from "@/lib/types";
 
 const inputClass =
   "w-full rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm";
@@ -24,14 +30,30 @@ const TIPO_LABELS: Record<TipoMedicion, string> = {
 
 type HitoRow = { id: string | null; titulo: string; key: number };
 
+/** Objetivos agrupados por área, para que el desplegable se pueda recorrer
+ * con la vista en vez de leyendo nueve títulos largos seguidos. */
+function agruparPorArea(okrs: OkrTrimestral[]): [string, OkrTrimestral[]][] {
+  const porArea = new Map<string, OkrTrimestral[]>();
+  for (const o of okrs) {
+    if (!porArea.has(o.area)) porArea.set(o.area, []);
+    porArea.get(o.area)!.push(o);
+  }
+  return [...porArea.entries()].sort((a, b) => a[0].localeCompare(b[0], "es"));
+}
+
 export function KrModal({
   okrsTrimestrales,
+  okrFijo,
+  clientes = [],
   kr,
   hitos,
   triggerLabel,
   triggerClassName,
 }: {
   okrsTrimestrales?: OkrTrimestral[];
+  /** Cuando el alta sale de la fila de un objetivo, no hay nada que elegir. */
+  okrFijo?: OkrTrimestral;
+  clientes?: Cliente[];
   kr?: KeyResult;
   hitos?: HitoKr[];
   triggerLabel: string;
@@ -40,6 +62,7 @@ export function KrModal({
   const isEdit = !!kr;
   const [open, setOpen] = useState(false);
   const [tipo, setTipo] = useState<TipoMedicion>(kr?.tipo_medicion ?? "porcentaje");
+  const [clienteId, setClienteId] = useState(kr?.cliente_id ?? "");
   const [hitoRows, setHitoRows] = useState<HitoRow[]>([]);
   const [nextKey, setNextKey] = useState(0);
 
@@ -51,6 +74,7 @@ export function KrModal({
     setHitoRows(base);
     setNextKey(base.length);
     setTipo(kr?.tipo_medicion ?? "porcentaje");
+    setClienteId(kr?.cliente_id ?? "");
     setOpen(true);
   }
 
@@ -92,9 +116,13 @@ export function KrModal({
             </div>
 
             <form action={formAction} className="space-y-3">
-              {!isEdit && (
+              {!isEdit && !okrFijo && (
                 <div className="space-y-1">
                   <label className={labelClass}>OKR trimestral</label>
+                  {/* Agrupado por área y con la marca de colaborativo. Antes
+                      era una lista plana de nueve títulos largos: alguien
+                      buscó su objetivo colaborativo, lo tuvo primero en la
+                      lista y no lo reconoció, porque nada lo distinguía. */}
                   <select
                     name="okr_trimestral_id"
                     required
@@ -104,13 +132,22 @@ export function KrModal({
                     <option value="" disabled>
                       Elegí un OKR trimestral
                     </option>
-                    {(okrsTrimestrales ?? []).map((o) => (
-                      <option key={o.id} value={o.id}>
-                        [{o.area}] {o.titulo} ({o.trimestre} {o.anio})
-                      </option>
+                    {agruparPorArea(okrsTrimestrales ?? []).map(([area, lista]) => (
+                      <optgroup key={area} label={area}>
+                        {lista.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.es_colaborativo ? "🤝 " : ""}
+                            {o.titulo} ({o.trimestre} {o.anio})
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </div>
+              )}
+
+              {okrFijo && (
+                <input type="hidden" name="okr_trimestral_id" value={okrFijo.id} />
               )}
 
               <div className="space-y-1">
@@ -219,25 +256,48 @@ export function KrModal({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
                 <div className="space-y-1">
                   <label className={labelClass}>Cliente asociado (opcional)</label>
-                  <input
-                    name="cliente_asociado"
-                    defaultValue={kr?.cliente_asociado ?? ""}
+                  {/* Desplegable y no texto libre: con el trigger que resuelve
+                      el cliente por nombre, un "Bati" tipeado acá creaba una
+                      cuenta nueva en silencio. */}
+                  <select
+                    name="cliente_id"
+                    value={clienteId}
+                    onChange={(e) => setClienteId(e.target.value)}
                     className={inputClass}
-                  />
+                  >
+                    <option value="">Sin cliente asociado</option>
+                    {clientes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="space-y-1">
-                  <label className={labelClass}>Margen esperado (%)</label>
-                  <input
-                    name="margen_utilidad_esperado"
-                    type="number"
-                    step="any"
-                    defaultValue={kr?.margen_utilidad_esperado ?? 65}
-                    className={inputClass}
-                  />
-                </div>
+
+                {/* El margen esperado es de rentabilidad de cuenta. En un KR
+                    sin cliente no significa nada, y mostrarlo siempre con un
+                    65 por defecto se leía como si fuera la meta del KR. */}
+                {clienteId && (
+                  <div className="space-y-1">
+                    <label className={labelClass}>
+                      Margen esperado de la cuenta (%)
+                    </label>
+                    <input
+                      name="margen_utilidad_esperado"
+                      type="number"
+                      step="any"
+                      defaultValue={kr?.margen_utilidad_esperado ?? 65}
+                      className={inputClass}
+                    />
+                    <p className="text-xs text-tenue">
+                      Es la rentabilidad esperada del cliente, no la meta de
+                      este Key Result.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {state?.error && <p className="text-sm text-red-600">{state.error}</p>}

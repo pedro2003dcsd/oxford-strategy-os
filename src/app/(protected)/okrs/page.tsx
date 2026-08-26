@@ -16,6 +16,7 @@ import { ultimasEdiciones } from "@/lib/historial-server";
 import { hasAlertaRentabilidad, progresoPct } from "@/lib/kr-logic";
 import { Avatar } from "@/components/Avatar";
 import type {
+  Cliente,
   HitoKr,
   KeyResult,
   OkrAnual,
@@ -35,6 +36,8 @@ export default async function OkrsPage() {
     { data: keyResults },
     { data: personas },
     { data: responsables },
+    { data: clientes },
+    { data: iniciativas },
   ] = await Promise.all([
     supabase.from("pilares").select("*").order("nombre"),
     supabase.from("okr_anual").select("*").order("titulo"),
@@ -48,6 +51,10 @@ export default async function OkrsPage() {
     supabase
       .from("okr_responsables")
       .select("*, usuarios_autorizados ( * )"),
+    supabase.from("clientes").select("*").order("nombre"),
+    // Solo el kr_id: acá alcanza con cuántas hay. Embeberlas dentro de
+    // key_results traía las filas enteras sin necesidad.
+    supabase.from("iniciativas").select("kr_id"),
   ]);
 
   const pilaresList = (pilares ?? []) as Pilar[];
@@ -57,6 +64,12 @@ export default async function OkrsPage() {
     hitos_kr: HitoKr[];
   })[];
   const personasList = (personas ?? []) as UsuarioAutorizado[];
+  const clientesList = (clientes ?? []) as Cliente[];
+
+  const iniciativasPorKr = new Map<string, number>();
+  for (const i of (iniciativas ?? []) as { kr_id: string }[]) {
+    iniciativasPorKr.set(i.kr_id, (iniciativasPorKr.get(i.kr_id) ?? 0) + 1);
+  }
 
   // Co-responsables agrupados por objetivo, para no recorrer la lista entera
   // en cada tarjeta.
@@ -225,11 +238,21 @@ export default async function OkrsPage() {
               ⚠
             </span>
           )}
+          {/* Las iniciativas viven en la ficha del KR. Desde Alineación no
+              había ningún camino hacia ellas, y Alineación es donde la gente
+              está cuando arma el trimestre. */}
+          <Link
+            href={`/kr/${kr.id}`}
+            className="ml-auto shrink-0 rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
+          >
+            Iniciativas ({iniciativasPorKr.get(kr.id) ?? 0})
+          </Link>
           <KrModal
             kr={kr}
+            clientes={clientesList}
             hitos={kr.hitos_kr}
             triggerLabel="Editar"
-            triggerClassName="ml-auto shrink-0 rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
+            triggerClassName="shrink-0 rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
           />
         </div>
         <LeyendaEdicion edicion={edicionesKr.get(kr.id)} />
@@ -262,14 +285,25 @@ export default async function OkrsPage() {
           </p>
         }
         accion={
-          <OkrTrimestralModal
-            okr={ot}
-            okrsAnuales={okrsAnualesList}
-            personas={personasList}
-            coResponsablesActuales={idsCoResponsables(ot.id)}
-            triggerLabel="Editar"
-            triggerClassName="shrink-0 rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
-          />
+          <span className="flex shrink-0 items-center gap-1">
+            {/* Agregar un KR desde el objetivo mismo. Antes había que subir
+                al botón de arriba de todo y encontrarlo en una lista de nueve
+                títulos, donde nadie reconocía el suyo. */}
+            <KrModal
+              okrFijo={ot}
+              clientes={clientesList}
+              triggerLabel="+ KR"
+              triggerClassName="rounded-md px-2 py-0.5 text-xs font-medium text-oxford transition hover:bg-oxford-suave"
+            />
+            <OkrTrimestralModal
+              okr={ot}
+              okrsAnuales={okrsAnualesList}
+              personas={personasList}
+              coResponsablesActuales={idsCoResponsables(ot.id)}
+              triggerLabel="Editar"
+              triggerClassName="rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
+            />
+          </span>
         }
       >
         <LeyendaEdicion edicion={edicionesOkr.get(ot.id)} />
@@ -334,6 +368,7 @@ export default async function OkrsPage() {
         </div>
         <KrModal
           okrsTrimestrales={okrsTrimestralesList}
+          clientes={clientesList}
           triggerLabel="+ Nuevo Key Result"
           triggerClassName="rounded-md bg-oxford px-3 py-1.5 text-sm font-medium text-white"
         />

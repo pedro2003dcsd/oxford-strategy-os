@@ -294,11 +294,18 @@ export function KrDrawer({
         </div>
 
         <footer className="border-t border-linea px-5 py-3">
+          {/* Botón y no leyenda gris: esta es la pantalla más completa de
+              la app y estaba escondida detrás de un texto chiquito que nadie
+              leía. */}
           <Link
             href={`/kr/${kr.id}`}
-            className="text-xs font-medium text-oxford hover:underline"
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-oxford px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-oxford-fuerte"
           >
-            Abrir ficha completa (cargar check-in, hitos y margen) ↗
+            Abrir ficha completa
+            <span className="font-normal opacity-80">
+              check-in, hitos, iniciativas y margen
+            </span>
+            ↗
           </Link>
         </footer>
       </aside>
