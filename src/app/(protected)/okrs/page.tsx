@@ -12,6 +12,7 @@ import { Collapsible } from "@/components/Collapsible";
 import { KrModal } from "@/components/KrModal";
 import { AlinearOkr } from "@/components/AlinearOkr";
 import { LeyendaEdicion } from "@/components/HistorialEdicion";
+import { BorrarObjetivo } from "@/components/BorrarObjetivo";
 import { ultimasEdiciones } from "@/lib/historial-server";
 import { hasAlertaRentabilidad, progresoPct } from "@/lib/kr-logic";
 import { Avatar } from "@/components/Avatar";
@@ -254,6 +255,7 @@ export default async function OkrsPage() {
             triggerLabel="Editar"
             triggerClassName="shrink-0 rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
           />
+          <BorrarObjetivo tipo="kr" id={kr.id} titulo={kr.titulo} />
         </div>
         <LeyendaEdicion edicion={edicionesKr.get(kr.id)} />
       </div>
@@ -303,6 +305,7 @@ export default async function OkrsPage() {
               triggerLabel="Editar"
               triggerClassName="rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
             />
+            <BorrarObjetivo tipo="okr" id={ot.id} titulo={ot.titulo} />
           </span>
         }
       >

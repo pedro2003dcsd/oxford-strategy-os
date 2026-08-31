@@ -559,3 +559,49 @@ export async function updateKeyResult(
   revalidatePath(`/kr/${krId}`);
   return undefined;
 }
+
+// ------------------------------------------------------------
+// Borrado
+//
+// La app no tenía forma de borrar objetivos ni KRs: se podían crear y
+// editar, pero no dar de baja. Es lo que faltaba para poder limpiar datos
+// de prueba desde la pantalla, sin un script contra la base.
+//
+// El borrado es en cascada por FK: un OKR trimestral se lleva sus KRs, y
+// cada KR sus check-ins, hitos, iniciativas y compromisos. SOLOP y las
+// métricas de cliente solo se desasocian (on delete set null), no se
+// borran. La confirmación vive en el cliente.
+// ------------------------------------------------------------
+
+export async function deleteKeyResult(krId: string): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("key_results").delete().eq("id", krId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/okrs");
+  revalidatePath("/okrs/colaborativos");
+  revalidatePath("/");
+  return undefined;
+}
+
+export async function deleteOkrTrimestral(
+  okrId: string
+): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("okr_trimestral")
+    .delete()
+    .eq("id", okrId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/okrs");
+  revalidatePath("/okrs/colaborativos");
+  revalidatePath("/");
+  return undefined;
+}
