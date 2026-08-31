@@ -43,3 +43,6 @@ supabase/.branches
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Archivo de scoping de otro proyecto, no de esta app
+PLANO-CRM-CONSULTORIA.md
