@@ -192,23 +192,25 @@ function SelectorResponsables({
   );
 }
 
-/** Casilla de colaborativo más la grilla de áreas.
+/** El área del objetivo, más la opción de que sea colaborativo.
  *
- * Las áreas aparecen solo con la casilla tildada: mostrarlas siempre invita
- * a marcar áreas en objetivos de una sola, y después el filtro de
- * colaborativos trae cosas que no lo son. */
-function CamposColaborativos({
-  defaultChecked = false,
+ * La clave, y lo que pedía el equipo: un objetivo colaborativo NO tiene un
+ * área padre. Cuando se tilda la casilla, el desplegable de "Área"
+ * desaparece y las áreas del objetivo pasan a ser las que se marcan abajo.
+ * Pedir "elegí un área" para algo que es de varias no tenía sentido. */
+function AreaObjetivo({
+  defaultArea = "",
+  defaultColaborativo = false,
   defaultAreas = [],
 }: {
-  defaultChecked?: boolean;
+  defaultArea?: string;
+  defaultColaborativo?: boolean;
   defaultAreas?: Area[];
 }) {
-  const [colaborativo, setColaborativo] = useState(defaultChecked);
+  const [colaborativo, setColaborativo] = useState(defaultColaborativo);
   // Controlado y no `defaultChecked`: useActionState re-renderiza el
   // formulario cuando la acción devuelve error, y con checkbox no
-  // controlados eso borra lo que la persona acababa de tildar. Justo
-  // después de un error es el peor momento para perderle la selección.
+  // controlados eso borra lo que la persona acababa de tildar.
   const [areas, setAreas] = useState<Area[]>(defaultAreas);
 
   function alternar(area: Area, marcada: boolean) {
@@ -218,45 +220,71 @@ function CamposColaborativos({
   }
 
   return (
-    <div className="space-y-2 rounded-md border border-linea p-2.5">
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          name="es_colaborativo"
-          checked={colaborativo}
-          onChange={(e) => setColaborativo(e.target.checked)}
-          className="accent-oxford"
-        />
-        <span className="font-medium">Objetivo colaborativo</span>
-      </label>
-      <p className="text-xs text-tenue">
-        Transversal a varias áreas, como “Vender más Oxford” o “Eficiencia
-        operativa global”.
-      </p>
-
-      {colaborativo && (
-        <div className="space-y-1 pt-1">
-          <label className={labelClass}>
-            Áreas involucradas (mínimo dos) · {areas.length} elegida
-            {areas.length === 1 ? "" : "s"}
-          </label>
-          <div className="grid gap-1 sm:grid-cols-2">
+    <div className="space-y-2">
+      {/* El área padre existe solo para los objetivos de una sola área. En
+          un colaborativo no hay: las áreas son las involucradas. */}
+      {!colaborativo && (
+        <div className="space-y-1">
+          <label className={labelClass}>Área</label>
+          <select
+            name="area"
+            required
+            className={inputClass}
+            defaultValue={defaultArea}
+          >
+            <option value="" disabled>
+              Elegí un área
+            </option>
             {AREAS.map((a) => (
-              <label key={a} className="flex items-center gap-1.5 text-xs">
-                <input
-                  type="checkbox"
-                  name="areas_involucradas"
-                  value={a}
-                  checked={areas.includes(a)}
-                  onChange={(e) => alternar(a, e.target.checked)}
-                  className="accent-oxford"
-                />
+              <option key={a} value={a}>
                 {a}
-              </label>
+              </option>
             ))}
-          </div>
+          </select>
         </div>
       )}
+
+      <div className="space-y-2 rounded-md border border-linea p-2.5">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="es_colaborativo"
+            checked={colaborativo}
+            onChange={(e) => setColaborativo(e.target.checked)}
+            className="accent-oxford"
+          />
+          <span className="font-medium">Objetivo colaborativo</span>
+        </label>
+        <p className="text-xs text-tenue">
+          Transversal a varias áreas, como “Vender más Oxford” o “Eficiencia
+          operativa global”. No lleva un área única: elegís abajo cuáles
+          participan.
+        </p>
+
+        {colaborativo && (
+          <div className="space-y-1 pt-1">
+            <label className={labelClass}>
+              Áreas que participan (mínimo dos) · {areas.length} elegida
+              {areas.length === 1 ? "" : "s"}
+            </label>
+            <div className="grid gap-1 sm:grid-cols-2">
+              {AREAS.map((a) => (
+                <label key={a} className="flex items-center gap-1.5 text-xs">
+                  <input
+                    type="checkbox"
+                    name="areas_involucradas"
+                    value={a}
+                    checked={areas.includes(a)}
+                    onChange={(e) => alternar(a, e.target.checked)}
+                    className="accent-oxford"
+                  />
+                  {a}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -439,16 +467,6 @@ export function EditOkrTrimestralForm({
         </select>
       </div>
       <div className="space-y-1">
-        <label className={labelClass}>Área principal</label>
-        <select name="area" required className={inputClass} defaultValue={okr.area}>
-          {AREAS.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="space-y-1">
         <label className={labelClass}>Título</label>
         <input name="titulo" required defaultValue={okr.titulo} className={inputClass} />
       </div>
@@ -483,8 +501,9 @@ export function EditOkrTrimestralForm({
         principalPorDefecto={okr.responsable_id ?? ""}
         coPorDefecto={coResponsablesActuales}
       />
-      <CamposColaborativos
-        defaultChecked={okr.es_colaborativo}
+      <AreaObjetivo
+        defaultArea={okr.area}
+        defaultColaborativo={okr.es_colaborativo}
         defaultAreas={okr.areas_involucradas ?? []}
       />
       <ErrorText state={state} />
@@ -522,19 +541,6 @@ export function NewOkrTrimestralForm({
         </select>
       </div>
       <div className="space-y-1">
-        <label className={labelClass}>Área</label>
-        <select name="area" required className={inputClass} defaultValue="">
-          <option value="" disabled>
-            Elegí un área
-          </option>
-          {AREAS.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="space-y-1">
         <label className={labelClass}>Título</label>
         <input name="titulo" required className={inputClass} />
       </div>
@@ -558,7 +564,7 @@ export function NewOkrTrimestralForm({
         </div>
       </div>
       <SelectorResponsables personas={personas} />
-      <CamposColaborativos />
+      <AreaObjetivo />
       <ErrorText state={state} />
       <button type="submit" disabled={pending} className={submitClass}>
         {pending ? "Creando…" : "Crear OKR trimestral"}

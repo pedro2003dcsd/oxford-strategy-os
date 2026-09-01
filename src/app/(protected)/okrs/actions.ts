@@ -141,14 +141,8 @@ export async function createOkrTrimestral(
   if (veto) return { error: veto };
 
   const titulo = str(formData, "titulo");
-  const area = str(formData, "area");
   const trimestre = str(formData, "trimestre");
   const responsableId = str(formData, "responsable_id");
-
-  if (!titulo || !area || !trimestre || !responsableId) {
-    return { error: "Completá título, área, trimestre y quién rinde cuentas." };
-  }
-
   const esColaborativo = formData.get("es_colaborativo") === "on";
   const areas = areasInvolucradas(formData, esColaborativo);
 
@@ -156,6 +150,20 @@ export async function createOkrTrimestral(
     return {
       error:
         "Un OKR colaborativo necesita al menos dos áreas involucradas. Si es de una sola área, destildá la casilla.",
+    };
+  }
+
+  // En un colaborativo no hay área padre: se guarda la primera involucrada
+  // como referencia técnica, porque la columna es NOT NULL. Las áreas reales
+  // del objetivo son areas_involucradas, y de ahí sale en qué tableros
+  // aparece.
+  const area = esColaborativo ? areas[0] : str(formData, "area");
+
+  if (!titulo || !area || !trimestre || !responsableId) {
+    return {
+      error: esColaborativo
+        ? "Completá título, trimestre y quién rinde cuentas, y marcá las áreas."
+        : "Completá título, área, trimestre y quién rinde cuentas.",
     };
   }
 
@@ -306,14 +314,8 @@ export async function updateOkrTrimestral(
   if (veto) return { error: veto };
 
   const titulo = str(formData, "titulo");
-  const area = str(formData, "area");
   const trimestre = str(formData, "trimestre");
   const responsableId = str(formData, "responsable_id");
-
-  if (!titulo || !area || !trimestre || !responsableId) {
-    return { error: "Completá título, área, trimestre y quién rinde cuentas." };
-  }
-
   const esColaborativo = formData.get("es_colaborativo") === "on";
   const areas = areasInvolucradas(formData, esColaborativo);
 
@@ -321,6 +323,20 @@ export async function updateOkrTrimestral(
     return {
       error:
         "Un OKR colaborativo necesita al menos dos áreas involucradas. Si es de una sola área, destildá la casilla.",
+    };
+  }
+
+  // En un colaborativo no hay área padre: se guarda la primera involucrada
+  // como referencia técnica, porque la columna es NOT NULL. Las áreas reales
+  // del objetivo son areas_involucradas, y de ahí sale en qué tableros
+  // aparece.
+  const area = esColaborativo ? areas[0] : str(formData, "area");
+
+  if (!titulo || !area || !trimestre || !responsableId) {
+    return {
+      error: esColaborativo
+        ? "Completá título, trimestre y quién rinde cuentas, y marcá las áreas."
+        : "Completá título, área, trimestre y quién rinde cuentas.",
     };
   }
 

@@ -134,6 +134,16 @@ export function DashboardClient({
     return map;
   }, [checkIns]);
 
+  /** Las áreas donde vive un KR. Un objetivo colaborativo no tiene un área
+   * padre: aparece en cada una de las que involucra. */
+  function areasDe(kr: KeyResultCompleto): string[] {
+    const ot = kr.okr_trimestral;
+    if (ot?.es_colaborativo && ot.areas_involucradas?.length) {
+      return ot.areas_involucradas;
+    }
+    return [ot?.area ?? "Sin área asignada"];
+  }
+
   const visibles = useMemo(() => {
     /** Un KR está "en alerta" si su semáforo no está en verde, si tiene alerta
      * de rentabilidad, o si su proyecto en SOLOP se come las horas. */
@@ -157,7 +167,7 @@ export function DashboardClient({
     const base = krs.filter((kr) => {
       if (trimestre !== "Todos" && kr.okr_trimestral?.trimestre !== trimestre)
         return false;
-      if (area !== "Todas" && kr.okr_trimestral?.area !== area) return false;
+      if (area !== "Todas" && !areasDe(kr).includes(area)) return false;
       if (misObjetivos && !esMio(kr)) return false;
       return true;
     });
@@ -181,9 +191,12 @@ export function DashboardClient({
   const grupos = useMemo(() => {
     const porArea = new Map<string, KeyResultCompleto[]>();
     for (const kr of visibles.visibles) {
-      const a = kr.okr_trimestral?.area ?? "Sin área asignada";
-      if (!porArea.has(a)) porArea.set(a, []);
-      porArea.get(a)!.push(kr);
+      // Un colaborativo cae en cada área que involucra: cada equipo lo ve en
+      // su sección, distinguido con el chip de la tarjeta.
+      for (const a of areasDe(kr)) {
+        if (!porArea.has(a)) porArea.set(a, []);
+        porArea.get(a)!.push(kr);
+      }
     }
     return [...porArea.entries()].sort(
       (a, b) => AREA_ORDER.indexOf(a[0]) - AREA_ORDER.indexOf(b[0])
