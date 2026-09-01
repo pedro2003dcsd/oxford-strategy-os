@@ -16,6 +16,7 @@ import { BorrarObjetivo } from "@/components/BorrarObjetivo";
 import { ultimasEdiciones } from "@/lib/historial-server";
 import { hasAlertaRentabilidad, progresoPct } from "@/lib/kr-logic";
 import { Avatar } from "@/components/Avatar";
+import { TRIMESTRES } from "@/lib/types";
 import type {
   Cliente,
   HitoKr,
@@ -27,8 +28,18 @@ import type {
   UsuarioAutorizado,
 } from "@/lib/types";
 
-export default async function OkrsPage() {
+export default async function OkrsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ trimestre?: string }>;
+}) {
   const supabase = await createClient();
+  // Filtro por trimestre desde la URL: es un Server Component, así que el
+  // selector son links a ?trimestre=Q3 y no estado de cliente.
+  const { trimestre: qFiltro } = await searchParams;
+  const qActivo = TRIMESTRES.includes(qFiltro as (typeof TRIMESTRES)[number])
+    ? qFiltro
+    : null;
 
   const [
     { data: pilares },
@@ -61,6 +72,9 @@ export default async function OkrsPage() {
   const pilaresList = (pilares ?? []) as Pilar[];
   const okrsAnualesList = (okrsAnuales ?? []) as OkrAnual[];
   const okrsTrimestralesList = (okrsTrimestrales ?? []) as OkrTrimestral[];
+  const okrsTrimVisibles = qActivo
+    ? okrsTrimestralesList.filter((ot) => ot.trimestre === qActivo)
+    : okrsTrimestralesList;
   const keyResultsList = (keyResults ?? []) as (KeyResult & {
     hitos_kr: HitoKr[];
   })[];
@@ -141,7 +155,7 @@ export default async function OkrsPage() {
 
   const okrsTrimPorAnual = new Map<string, OkrTrimestral[]>();
   const okrsTrimSinAlinear: OkrTrimestral[] = [];
-  for (const ot of okrsTrimestralesList) {
+  for (const ot of okrsTrimVisibles) {
     if (!ot.okr_anual_id) {
       okrsTrimSinAlinear.push(ot);
       continue;
@@ -226,10 +240,15 @@ export default async function OkrsPage() {
     );
   }
 
-  function renderKr(kr: (typeof keyResultsList)[number]) {
+  function renderKr(kr: (typeof keyResultsList)[number], indice: number) {
     return (
       <div key={kr.id} className="py-1">
         <div className="flex items-center gap-2 text-sm">
+          {/* Número dentro del objetivo: lo pidió el equipo para nombrarlos
+              "KR1, KR2" sin escribirlo a mano. */}
+          <span className="shrink-0 rounded bg-linea/60 px-1.5 py-0.5 text-[11px] font-semibold text-tenue">
+            KR{indice + 1}
+          </span>
           <Link href={`/kr/${kr.id}`} className="truncate hover:underline">
             {kr.titulo}
           </Link>
@@ -313,7 +332,7 @@ export default async function OkrsPage() {
         {krs.length === 0 ? (
           <p className="py-1 text-xs text-tenue">Sin Key Results todavía.</p>
         ) : (
-          krs.map(renderKr)
+          krs.map((kr, i) => renderKr(kr, i))
         )}
       </Collapsible>
     );
@@ -368,6 +387,25 @@ export default async function OkrsPage() {
           <p className="text-sm text-tenue">
             Pilares → OKRs anuales → OKRs trimestrales por área → Key Results.
           </p>
+          <div className="mt-2 flex flex-wrap gap-1">
+            {(["Todo", ...TRIMESTRES] as const).map((t) => {
+              const activo = t === "Todo" ? !qActivo : qActivo === t;
+              const href = t === "Todo" ? "/okrs" : "/okrs?trimestre=" + t;
+              return (
+                <Link
+                  key={t}
+                  href={href}
+                  className={
+                    activo
+                      ? "rounded-md bg-oxford px-2.5 py-1 text-xs font-medium text-white"
+                      : "rounded-md bg-linea/60 px-2.5 py-1 text-xs font-medium text-tenue transition hover:text-foreground"
+                  }
+                >
+                  {t}
+                </Link>
+              );
+            })}
+          </div>
         </div>
         <KrModal
           okrsTrimestrales={okrsTrimestralesList}
