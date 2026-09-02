@@ -73,6 +73,7 @@ export default async function DashboardPage() {
       checkIns={(checkInsData ?? []) as CheckIn[]}
       proyectos={(proyectosData ?? []) as ProyectoSolop[]}
       responsableDelPerfil={perfil?.responsable ?? null}
+      areaDelPerfil={perfil?.area ?? null}
       misOkrIds={misOkrIds}
     />
   );

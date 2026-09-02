@@ -39,8 +39,11 @@ export interface UsuarioAutorizado {
   id: string;
   email: string;
   nombre: string;
-  /** Nombre tal cual figura en okr_trimestral.responsable. */
+  /** Nombre tal cual figura en okr_trimestral.responsable. Se mantiene por
+   * compatibilidad; ya no se edita a mano, se iguala al nombre. */
   responsable: string | null;
+  /** Área en la que trabaja. Arranca el filtro del Dashboard en lo suyo. */
+  area: Area | null;
   rol: Rol;
   activo: boolean;
   creado_at: string;

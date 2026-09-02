@@ -76,6 +76,7 @@ export function DashboardClient({
   checkIns = [],
   proyectos = [],
   responsableDelPerfil = null,
+  areaDelPerfil = null,
   misOkrIds = null,
 }: {
   krs: KeyResultCompleto[];
@@ -84,6 +85,9 @@ export function DashboardClient({
   /** Viene de la cuenta con la que se entró. Si está, manda sobre el
    * selector manual: nadie tiene que decir quién es si ya se logueó. */
   responsableDelPerfil?: string | null;
+  /** El área de la persona logueada. El Dashboard arranca filtrado ahí,
+   * como conveniencia: ve lo suyo primero, pero con un clic ve todo. */
+  areaDelPerfil?: string | null;
   /** Los OKRs trimestrales que lleva quien está mirando, resueltos por id
    * en el servidor: como principal o compartiendo el objetivo.
    *
@@ -93,7 +97,11 @@ export function DashboardClient({
   misOkrIds?: string[] | null;
 }) {
   const [trimestre, setTrimestre] = useState<(typeof TRIM_OPTIONS)[number]>("Todos");
-  const [area, setArea] = useState<(typeof AREA_OPTIONS)[number]>("Todas");
+  const [area, setArea] = useState<(typeof AREA_OPTIONS)[number]>(
+    AREA_OPTIONS.includes(areaDelPerfil as (typeof AREA_OPTIONS)[number])
+      ? (areaDelPerfil as (typeof AREA_OPTIONS)[number])
+      : "Todas"
+  );
   const [soloAlertas, setSoloAlertas] = useState(false);
   const [misObjetivos, setMisObjetivos] = useState(false);
   const [elegido, guardarResponsable] = useResponsable();

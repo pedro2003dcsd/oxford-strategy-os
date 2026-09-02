@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { perfilActual } from "@/lib/perfil";
-import { ROLES, type Rol } from "@/lib/types";
+import { AREAS, ROLES, type Area, type Rol } from "@/lib/types";
 
 export type EquipoState = { error?: string; ok?: string } | undefined;
 
@@ -27,18 +27,23 @@ export async function agregarUsuario(
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const nombre = String(formData.get("nombre") ?? "").trim();
-  const responsable = String(formData.get("responsable") ?? "").trim();
+  const areaRaw = String(formData.get("area") ?? "").trim();
   const rol = String(formData.get("rol") ?? "equipo") as Rol;
 
   if (!email || !email.includes("@")) return { error: "Ingresá un email válido." };
   if (!nombre) return { error: "Ingresá el nombre de la persona." };
   if (!ROLES.includes(rol)) return { error: "Rol inválido." };
 
+  const area = AREAS.includes(areaRaw as Area) ? (areaRaw as Area) : null;
+
   const supabase = await createClient();
   const { error } = await supabase.from("usuarios_autorizados").insert({
     email,
     nombre,
-    responsable: responsable || null,
+    // El alias se iguala al nombre: ya no se pide a mano, y asi no se
+    // vuelven a crear dos personas con el mismo alias.
+    responsable: nombre,
+    area,
     rol,
   });
 
@@ -64,6 +69,15 @@ export async function cambiarRolUsuario(id: string, rol: Rol) {
   const supabase = await createClient();
   await supabase.from("usuarios_autorizados").update({ rol }).eq("id", id);
   revalidatePath("/equipo");
+}
+
+export async function cambiarAreaUsuario(id: string, areaRaw: string) {
+  if (await exigirDireccion()) return;
+  const area = AREAS.includes(areaRaw as Area) ? (areaRaw as Area) : null;
+  const supabase = await createClient();
+  await supabase.from("usuarios_autorizados").update({ area }).eq("id", id);
+  revalidatePath("/equipo");
+  revalidatePath("/");
 }
 
 export async function cambiarResponsableUsuario(id: string, responsable: string) {
