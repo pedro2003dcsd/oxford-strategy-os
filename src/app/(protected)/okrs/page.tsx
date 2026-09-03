@@ -14,6 +14,7 @@ import { AlinearOkr } from "@/components/AlinearOkr";
 import { LeyendaEdicion } from "@/components/HistorialEdicion";
 import { BorrarObjetivo } from "@/components/BorrarObjetivo";
 import { ultimasEdiciones } from "@/lib/historial-server";
+import { perfilActual } from "@/lib/perfil";
 import { hasAlertaRentabilidad, progresoPct } from "@/lib/kr-logic";
 import { Avatar } from "@/components/Avatar";
 import { TRIMESTRES } from "@/lib/types";
@@ -34,6 +35,10 @@ export default async function OkrsPage({
   searchParams: Promise<{ trimestre?: string }>;
 }) {
   const supabase = await createClient();
+  const perfil = await perfilActual();
+  // Borrar objetivos y KR es solo de Dirección: el botón ni aparece para el
+  // resto, para no ofrecer algo que la acción va a rechazar.
+  const esDireccion = perfil?.esDireccion ?? false;
   // Filtro por trimestre desde la URL: es un Server Component, así que el
   // selector son links a ?trimestre=Q3 y no estado de cliente.
   const { trimestre: qFiltro } = await searchParams;
@@ -274,7 +279,9 @@ export default async function OkrsPage({
             triggerLabel="Editar"
             triggerClassName="shrink-0 rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
           />
-          <BorrarObjetivo tipo="kr" id={kr.id} titulo={kr.titulo} />
+          {esDireccion && (
+            <BorrarObjetivo tipo="kr" id={kr.id} titulo={kr.titulo} />
+          )}
         </div>
         <LeyendaEdicion edicion={edicionesKr.get(kr.id)} />
       </div>
@@ -324,7 +331,9 @@ export default async function OkrsPage({
               triggerLabel="Editar"
               triggerClassName="rounded-md px-2 py-0.5 text-xs text-tenue transition hover:bg-linea/60 hover:text-foreground"
             />
-            <BorrarObjetivo tipo="okr" id={ot.id} titulo={ot.titulo} />
+            {esDireccion && (
+              <BorrarObjetivo tipo="okr" id={ot.id} titulo={ot.titulo} />
+            )}
           </span>
         }
       >

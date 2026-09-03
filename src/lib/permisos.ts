@@ -21,3 +21,16 @@ export async function vetoDeEscritura(): Promise<string | null> {
 export async function puedeEscribir(): Promise<boolean> {
   return (await vetoDeEscritura()) === null;
 }
+
+export const MENSAJE_SOLO_DIRECCION =
+  "Solo Dirección puede borrar objetivos. Pedile a alguien de Dirección que lo haga.";
+
+/** Borrar objetivos y KR queda reservado a Dirección: es destructivo y en
+ * cascada se lleva check-ins e iniciativas. El resto del equipo carga y
+ * edita, pero no da de baja. */
+export async function vetoDeBorrado(): Promise<string | null> {
+  const perfil = await perfilActual();
+  if (!perfil) return "No hay sesión.";
+  if (perfil.rol !== "direccion") return MENSAJE_SOLO_DIRECCION;
+  return null;
+}

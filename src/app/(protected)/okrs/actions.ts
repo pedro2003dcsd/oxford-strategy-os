@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { puedeEscribir, vetoDeEscritura } from "@/lib/permisos";
+import { puedeEscribir, vetoDeBorrado, vetoDeEscritura } from "@/lib/permisos";
 import { registrarCambios } from "@/lib/historial-server";
 import type { Area } from "@/lib/types";
 
@@ -590,7 +590,7 @@ export async function updateKeyResult(
 // ------------------------------------------------------------
 
 export async function deleteKeyResult(krId: string): Promise<FormActionState> {
-  const veto = await vetoDeEscritura();
+  const veto = await vetoDeBorrado();
   if (veto) return { error: veto };
 
   const supabase = await createClient();
@@ -606,7 +606,7 @@ export async function deleteKeyResult(krId: string): Promise<FormActionState> {
 export async function deleteOkrTrimestral(
   okrId: string
 ): Promise<FormActionState> {
-  const veto = await vetoDeEscritura();
+  const veto = await vetoDeBorrado();
   if (veto) return { error: veto };
 
   const supabase = await createClient();
