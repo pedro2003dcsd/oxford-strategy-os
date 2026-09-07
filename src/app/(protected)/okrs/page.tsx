@@ -57,9 +57,15 @@ export default async function OkrsPage({
     { data: iniciativas },
   ] = await Promise.all([
     supabase.from("pilares").select("*").order("nombre"),
-    supabase.from("okr_anual").select("*").order("titulo"),
-    supabase.from("okr_trimestral").select("*").order("area"),
-    supabase.from("key_results").select("*, hitos_kr ( * )").order("titulo"),
+    supabase.from("okr_anual").select("*").order("created_at", { ascending: true }),
+    supabase
+      .from("okr_trimestral")
+      .select("*")
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("key_results")
+      .select("*, hitos_kr ( * )")
+      .order("created_at", { ascending: true }),
     supabase
       .from("usuarios_autorizados")
       .select("*")
