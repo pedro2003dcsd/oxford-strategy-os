@@ -59,6 +59,45 @@ export async function addIniciativa(
   return undefined;
 }
 
+/** Editar una iniciativa ya cargada: título, responsable, fecha de
+ * vencimiento y link. Antes no se podía corregir nada; para cambiar una
+ * fecha había que borrar la iniciativa y cargarla de nuevo. */
+export async function updateIniciativa(
+  iniciativaId: string,
+  krId: string,
+  _prevState: IniciativaState,
+  formData: FormData
+): Promise<IniciativaState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
+  const titulo = String(formData.get("titulo") ?? "").trim();
+  const responsable = String(formData.get("responsable") ?? "").trim();
+  const fechaLimite = String(formData.get("fecha_limite") ?? "").trim();
+  const linkRecurso = String(formData.get("link_recurso") ?? "").trim();
+
+  if (!titulo) return { error: "Escribí qué hay que hacer." };
+  if (linkRecurso && !/^https?:\/\//i.test(linkRecurso)) {
+    return { error: "El link tiene que empezar con http:// o https://" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("iniciativas")
+    .update({
+      titulo,
+      responsable: responsable || null,
+      fecha_limite: fechaLimite || null,
+      link_recurso: linkRecurso || null,
+      actualizado_at: new Date().toISOString(),
+    })
+    .eq("id", iniciativaId);
+
+  if (error) return { error: error.message };
+  revalidarVistas(krId);
+  return undefined;
+}
+
 export async function setEstadoIniciativa(
   iniciativaId: string,
   krId: string,

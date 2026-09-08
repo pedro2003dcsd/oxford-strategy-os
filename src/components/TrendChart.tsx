@@ -16,9 +16,14 @@ import type { CheckIn } from "@/lib/types";
 export function TrendChart({
   checkIns,
   valorMeta,
+  valorInicial = 0,
 }: {
   checkIns: CheckIn[];
   valorMeta: number;
+  /** Punto de partida del KR. Sin esto el gráfico arrancaba en el primer
+   * check-in y, con uno solo, se veía una línea plana que no mostraba avance.
+   * Con el inicio adelante, la rayita ya sube desde el primer registro. */
+  valorInicial?: number;
 }) {
   if (checkIns.length === 0) {
     return (
@@ -28,10 +33,13 @@ export function TrendChart({
     );
   }
 
-  const data = checkIns.map((c) => ({
-    fecha: format(new Date(c.creado_at), "d MMM", { locale: es }),
-    valor: c.valor_registrado,
-  }));
+  const data = [
+    { fecha: "Inicio", valor: valorInicial },
+    ...checkIns.map((c) => ({
+      fecha: format(new Date(c.creado_at), "d MMM", { locale: es }),
+      valor: c.valor_registrado,
+    })),
+  ];
 
   return (
     <div className="h-48 w-full">

@@ -113,7 +113,11 @@ export default async function KrDetailPage({
             {krCompleto.tipo_medicion === "hitos" ? (
               <HitosList krId={krCompleto.id} hitos={krCompleto.hitos_kr} />
             ) : (
-              <TrendChart checkIns={historial} valorMeta={krCompleto.valor_meta} />
+              <TrendChart
+                checkIns={historial}
+                valorMeta={krCompleto.valor_meta}
+                valorInicial={krCompleto.valor_inicial}
+              />
             )}
           </div>
 
