@@ -4,7 +4,7 @@ import { SemaforoBadge } from "@/components/SemaforoBadge";
 import { ResponsablesPanel } from "@/components/ResponsablesPanel";
 import { LeyendaEdicion } from "@/components/HistorialEdicion";
 import { ultimasEdiciones } from "@/lib/historial-server";
-import { progresoPct } from "@/lib/kr-logic";
+import { progresoPct, numerarKrsPorObjetivo } from "@/lib/kr-logic";
 import type {
   HitoKr,
   KeyResult,
@@ -34,6 +34,7 @@ export default async function ColaborativosPage() {
   const krsList = (keyResults ?? []) as (KeyResult & { hitos_kr: HitoKr[] })[];
   const personasList = (personas ?? []) as UsuarioAutorizado[];
 
+  const numeroKr = numerarKrsPorObjetivo(krsList);
   const krsPorOkr = new Map<string, typeof krsList>();
   for (const kr of krsList) {
     if (!krsPorOkr.has(kr.okr_trimestral_id)) krsPorOkr.set(kr.okr_trimestral_id, []);
@@ -133,6 +134,9 @@ export default async function ColaborativosPage() {
                   ) : (
                     krs.map((kr) => (
                       <div key={kr.id} className="flex items-center gap-2 text-sm">
+                        <span className="shrink-0 rounded bg-linea/60 px-1.5 py-0.5 text-[11px] font-semibold text-tenue">
+                          KR{numeroKr.get(kr.id)}
+                        </span>
                         <Link
                           href={`/kr/${kr.id}`}
                           className="truncate hover:underline"

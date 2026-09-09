@@ -10,10 +10,13 @@ import { formatValor, hasAlertaRentabilidad, progresoPct } from "@/lib/kr-logic"
 
 export function KrCard({
   kr,
+  numero,
   ultimoBloqueo,
   onSelect,
 }: {
   kr: KeyResultCompleto;
+  /** KR1, KR2... Su posición dentro del objetivo, igual que en Alineación. */
+  numero?: number;
   ultimoBloqueo?: CheckIn | null;
   onSelect: (kr: KeyResultCompleto) => void;
 }) {
@@ -34,7 +37,14 @@ export function KrCard({
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold leading-snug">{kr.titulo}</p>
+        <p className="text-sm font-semibold leading-snug">
+          {numero !== undefined && (
+            <span className="mr-1.5 rounded bg-linea/60 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-tenue">
+              KR{numero}
+            </span>
+          )}
+          {kr.titulo}
+        </p>
         <span className="flex shrink-0 items-center gap-1.5">
           <RentabilityBadge kr={kr} />
           <SemaforoBadge estado={kr.estado_semaforo} compact />

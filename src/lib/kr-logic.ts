@@ -52,3 +52,30 @@ export function formatValor(valor: number, tipo: KeyResult["tipo_medicion"]): st
       return `${valor}`;
   }
 }
+
+/** Número de cada KR dentro de su objetivo (KR1, KR2...), por orden de
+ * creación. Se calcula igual en todas las pantallas para que un KR tenga
+ * siempre el mismo número, lo mires en Alineación, el Dashboard o los
+ * colaborativos. */
+export function numerarKrsPorObjetivo<
+  T extends { id: string; okr_trimestral_id: string; created_at: string }
+>(krs: T[]): Map<string, number> {
+  const porObjetivo = new Map<string, T[]>();
+  for (const kr of krs) {
+    if (!porObjetivo.has(kr.okr_trimestral_id)) {
+      porObjetivo.set(kr.okr_trimestral_id, []);
+    }
+    porObjetivo.get(kr.okr_trimestral_id)!.push(kr);
+  }
+
+  const numero = new Map<string, number>();
+  for (const lista of porObjetivo.values()) {
+    [...lista]
+      .sort(
+        (a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      )
+      .forEach((kr, i) => numero.set(kr.id, i + 1));
+  }
+  return numero;
+}

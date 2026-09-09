@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { AREAS, TRIMESTRES } from "@/lib/types";
 import type { CheckIn, KeyResultCompleto, ProyectoSolop } from "@/lib/types";
-import { hasAlertaRentabilidad } from "@/lib/kr-logic";
+import { hasAlertaRentabilidad, numerarKrsPorObjetivo } from "@/lib/kr-logic";
 import { tieneAlertaRentabilidad, advertenciaHoras } from "@/lib/solop-logic";
 import { responsablesDe } from "@/lib/personas";
 import { useResponsable } from "@/lib/use-responsable";
@@ -108,6 +108,9 @@ export function DashboardClient({
   const [krAbierto, setKrAbierto] = useState<string | null>(null);
 
   const responsables = useMemo(() => responsablesDe(krs), [krs]);
+  // Número de cada KR dentro de su objetivo, sobre la lista completa: así el
+  // número no cambia aunque el filtro por área muestre solo algunos.
+  const numeroKr = useMemo(() => numerarKrsPorObjetivo(krs), [krs]);
 
   // El perfil de la cuenta gana sobre la elección manual del navegador.
   const yo = responsableDelPerfil ?? elegido;
@@ -305,6 +308,7 @@ export function DashboardClient({
               <KrCard
                 key={kr.id}
                 kr={kr}
+                numero={numeroKr.get(kr.id)}
                 ultimoBloqueo={bloqueoPorKr.get(kr.id)}
                 onSelect={(k) => setKrAbierto(k.id)}
               />
