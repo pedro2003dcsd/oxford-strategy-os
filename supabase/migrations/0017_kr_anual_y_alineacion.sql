@@ -96,7 +96,19 @@ create index if not exists idx_kr_alineacion_trimestral on kr_alineacion(kr_trim
 create index if not exists idx_kr_alineacion_anual on kr_alineacion(kr_anual_id);
 
 -- ------------------------------------------------------------
--- 4. RLS: mismo criterio que el resto (0015)
+-- 4. Grants: sin esto RLS ni se evalúa
+--
+-- El rol `authenticated` necesita el permiso de tabla además de las
+-- políticas. Las tablas viejas lo tienen; una tabla nueva creada a mano no
+-- lo hereda sola, y sin él la app recibe "permission denied" antes de que
+-- RLS decida nada. Idempotente.
+-- ------------------------------------------------------------
+grant select, insert, update, delete
+  on kr_anual, okr_alineacion, kr_alineacion
+  to authenticated;
+
+-- ------------------------------------------------------------
+-- 5. RLS: mismo criterio que el resto (0015)
 --
 -- Leer, cualquier autenticado. Escribir, cualquiera menos el rol lectura.
 -- ------------------------------------------------------------
@@ -129,7 +141,7 @@ begin
 end $$;
 
 -- ------------------------------------------------------------
--- 5. Control: cada tabla nueva tiene que quedar con 4 políticas.
+-- 6. Control: cada tabla nueva tiene que quedar con 4 políticas.
 -- ------------------------------------------------------------
 select tablename, count(*) as politicas
 from pg_policies

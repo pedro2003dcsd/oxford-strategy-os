@@ -423,6 +423,159 @@ export async function quitarResponsable(responsableId: string) {
   revalidatePath("/okrs/colaborativos");
 }
 
+// ------------------------------------------------------------
+// KR anual
+//
+// El KR anual cuelga de un OKR anual y tiene meta propia. No lleva avance:
+// su relación con los KR trimestrales es solo para el mapa, no para computar
+// un porcentaje (decisión de la reunión del 11/09).
+// ------------------------------------------------------------
+
+export async function createKrAnual(
+  okrAnualId: string,
+  _prevState: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
+  const titulo = str(formData, "titulo");
+  const tipoMedicion = str(formData, "tipo_medicion");
+  if (!titulo || !tipoMedicion) {
+    return { error: "Completá el título y el tipo de medición." };
+  }
+
+  const valorMeta = Number(formData.get("valor_meta"));
+  if (Number.isNaN(valorMeta)) return { error: "Ingresá una meta numérica." };
+
+  const supabase = await createClient();
+
+  // El nuevo KR anual va al final de la lista de su OKR anual.
+  const { data: ultimo } = await supabase
+    .from("kr_anual")
+    .select("orden")
+    .eq("okr_anual_id", okrAnualId)
+    .order("orden", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { error } = await supabase.from("kr_anual").insert({
+    okr_anual_id: okrAnualId,
+    titulo,
+    tipo_medicion: tipoMedicion,
+    valor_inicial: Number(formData.get("valor_inicial")) || 0,
+    valor_meta: valorMeta,
+    orden: ((ultimo?.orden as number | undefined) ?? 0) + 1,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/okrs");
+  return undefined;
+}
+
+export async function updateKrAnual(
+  krAnualId: string,
+  _prevState: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const veto = await vetoDeEscritura();
+  if (veto) return { error: veto };
+
+  const titulo = str(formData, "titulo");
+  const tipoMedicion = str(formData, "tipo_medicion");
+  if (!titulo || !tipoMedicion) {
+    return { error: "Completá el título y el tipo de medición." };
+  }
+
+  const valorMeta = Number(formData.get("valor_meta"));
+  if (Number.isNaN(valorMeta)) return { error: "Ingresá una meta numérica." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("kr_anual")
+    .update({
+      titulo,
+      tipo_medicion: tipoMedicion,
+      valor_inicial: Number(formData.get("valor_inicial")) || 0,
+      valor_meta: valorMeta,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", krAnualId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/okrs");
+  return undefined;
+}
+
+export async function deleteKrAnual(krAnualId: string): Promise<FormActionState> {
+  const veto = await vetoDeBorrado();
+  if (veto) return { error: veto };
+
+  const supabase = await createClient();
+  // Los vínculos en kr_alineacion se van solos por FK on delete cascade.
+  const { error } = await supabase.from("kr_anual").delete().eq("id", krAnualId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/okrs");
+  return undefined;
+}
+
+// ------------------------------------------------------------
+// Alineación muchos-a-muchos (el mapa)
+//
+// Dos niveles independientes: OKR trimestral ↔ OKR anual, y KR trimestral ↔
+// KR anual. Vincular ya existente no es un error (23505): el estado final es
+// el que se quería.
+// ------------------------------------------------------------
+
+export async function vincularOkr(
+  okrTrimestralId: string,
+  okrAnualId: string
+) {
+  if (!(await puedeEscribir())) return;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("okr_alineacion")
+    .insert({ okr_trimestral_id: okrTrimestralId, okr_anual_id: okrAnualId });
+  if (error && error.code !== "23505") return;
+  revalidatePath("/okrs");
+}
+
+export async function desvincularOkr(
+  okrTrimestralId: string,
+  okrAnualId: string
+) {
+  if (!(await puedeEscribir())) return;
+  const supabase = await createClient();
+  await supabase
+    .from("okr_alineacion")
+    .delete()
+    .eq("okr_trimestral_id", okrTrimestralId)
+    .eq("okr_anual_id", okrAnualId);
+  revalidatePath("/okrs");
+}
+
+export async function vincularKr(krTrimestralId: string, krAnualId: string) {
+  if (!(await puedeEscribir())) return;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("kr_alineacion")
+    .insert({ kr_trimestral_id: krTrimestralId, kr_anual_id: krAnualId });
+  if (error && error.code !== "23505") return;
+  revalidatePath("/okrs");
+}
+
+export async function desvincularKr(krTrimestralId: string, krAnualId: string) {
+  if (!(await puedeEscribir())) return;
+  const supabase = await createClient();
+  await supabase
+    .from("kr_alineacion")
+    .delete()
+    .eq("kr_trimestral_id", krTrimestralId)
+    .eq("kr_anual_id", krAnualId);
+  revalidatePath("/okrs");
+}
+
 export async function createKeyResult(
   _prevState: FormActionState,
   formData: FormData

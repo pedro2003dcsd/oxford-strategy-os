@@ -44,7 +44,7 @@ const SECCIONES: Seccion[] = [
         href: "/okrs",
         icono: "🌳",
         label: "Alineación Estratégica",
-        descripcion: "Pilares 2026 y arbolado de objetivos",
+        descripcion: "Mapa de OKRs anuales y trimestrales",
       },
       {
         href: "/okrs/colaborativos",

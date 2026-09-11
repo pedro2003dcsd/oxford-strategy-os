@@ -87,6 +87,37 @@ export interface OkrTrimestral {
   created_at: string;
 }
 
+/** Resultado del OKR anual. Tiene meta propia (la carga Dirección una vez
+ * al año) pero no lleva avance calculado: la relación con los KR
+ * trimestrales es solo para el mapa, no para computar un porcentaje. */
+export interface KrAnual {
+  id: string;
+  okr_anual_id: string;
+  titulo: string;
+  tipo_medicion: TipoMedicion;
+  valor_inicial: number;
+  valor_meta: number;
+  orden: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Puente muchos-a-muchos: un OKR trimestral puede colgar de varios anuales. */
+export interface OkrAlineacion {
+  id: string;
+  okr_trimestral_id: string;
+  okr_anual_id: string;
+  created_at: string;
+}
+
+/** Puente muchos-a-muchos: un KR trimestral puede empujar a varios KR anuales. */
+export interface KrAlineacion {
+  id: string;
+  kr_trimestral_id: string;
+  kr_anual_id: string;
+  created_at: string;
+}
+
 export interface KeyResult {
   id: string;
   okr_trimestral_id: string;

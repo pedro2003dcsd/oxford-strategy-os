@@ -97,6 +97,71 @@ export function NewOkrAnualForm({
   );
 }
 
+/** Alta de OKR anual sin pilar. El pilar se está retirando: la jerarquía
+ * pasa a ser OKR anual → OKR trimestral, sin un nivel por encima. */
+export function NewOkrAnualModal({
+  personas,
+  triggerLabel,
+  triggerClassName,
+}: {
+  personas: UsuarioAutorizado[];
+  triggerLabel: string;
+  triggerClassName: string;
+}) {
+  return (
+    <Modal
+      titulo="Nuevo OKR anual"
+      triggerLabel={triggerLabel}
+      triggerClassName={triggerClassName}
+    >
+      {(cerrar) => <NewOkrAnualSinPilarForm personas={personas} onDone={cerrar} />}
+    </Modal>
+  );
+}
+
+function NewOkrAnualSinPilarForm({
+  personas,
+  onDone,
+}: {
+  personas: UsuarioAutorizado[];
+  onDone: () => void;
+}) {
+  const [state, formAction, pending] = useActionState<FormActionState, FormData>(
+    async (prev, formData) => {
+      const result = await createOkrAnual(prev, formData);
+      if (!result?.error) onDone();
+      return result;
+    },
+    undefined
+  );
+  return (
+    <form action={formAction} className="space-y-2">
+      <div className="space-y-1">
+        <label className={labelClass}>Título del OKR anual</label>
+        <input name="titulo" required className={inputClass} />
+      </div>
+      <div className="space-y-1">
+        <label className={labelClass}>Objetivo</label>
+        <textarea name="objetivo" rows={2} className={inputClass} />
+      </div>
+      <SelectorResponsables personas={personas} />
+      <ErrorText state={state} />
+      <div className="flex justify-end gap-2 pt-1">
+        <button
+          type="button"
+          onClick={onDone}
+          className="rounded-md border border-linea px-3 py-1.5 text-sm font-medium"
+        >
+          Cancelar
+        </button>
+        <button type="submit" disabled={pending} className={submitClass}>
+          {pending ? "Creando…" : "Crear OKR anual"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 /** Cómo se nombra a una persona en el selector.
  *
  * Manda `nombre`, que es la identidad: `responsable` es el alias con el que

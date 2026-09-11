@@ -58,7 +58,6 @@ export default async function KrDetailPage({
       <div className="space-y-2">
         {okrTrim && (
           <p className="text-xs text-tenue">
-            {okrTrim.okr_anual?.pilares?.nombre ?? "Sin pilar"} ·{" "}
             {okrTrim.okr_anual?.titulo ?? "Sin OKR anual"} ·{" "}
             <Link href="/okrs" className="underline hover:no-underline">
               {okrTrim.area}
