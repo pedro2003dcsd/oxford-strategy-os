@@ -1,5 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import type { CheckIn, KeyResultCompleto, ProyectoSolop } from "@/lib/types";
+import type {
+  CheckIn,
+  Cliente,
+  KeyResultCompleto,
+  OkrAnual,
+  OkrTrimestral,
+  ProyectoSolop,
+  UsuarioAutorizado,
+} from "@/lib/types";
 import { DashboardClient } from "@/components/DashboardClient";
 import { perfilActual } from "@/lib/perfil";
 
@@ -34,15 +42,33 @@ export default async function DashboardPage() {
 
   // El drawer muestra el historial de check-ins y el detalle de SOLOP, así que
   // los traemos acá y no en una segunda vuelta desde el cliente.
-  const [{ data: checkInsData }, { data: proyectosData }, perfil] =
-    await Promise.all([
-      supabase
-        .from("check_ins")
-        .select("*")
-        .order("creado_at", { ascending: true }),
-      supabase.from("proyectos_solop").select("*"),
-      perfilActual(),
-    ]);
+  const [
+    { data: checkInsData },
+    { data: proyectosData },
+    { data: okrsTrimData },
+    { data: okrsAnualesData },
+    { data: clientesData },
+    { data: personasData },
+    perfil,
+  ] = await Promise.all([
+    supabase
+      .from("check_ins")
+      .select("*")
+      .order("creado_at", { ascending: true }),
+    supabase.from("proyectos_solop").select("*"),
+    supabase
+      .from("okr_trimestral")
+      .select("*")
+      .order("created_at", { ascending: true }),
+    supabase.from("okr_anual").select("*").order("created_at", { ascending: true }),
+    supabase.from("clientes").select("*").order("nombre"),
+    supabase
+      .from("usuarios_autorizados")
+      .select("*")
+      .eq("activo", true)
+      .order("nombre"),
+    perfilActual(),
+  ]);
 
   // Los OKRs que lleva quien está mirando, por id: los que rinde cuentas más
   // los que comparte. Se resuelve acá y no en el cliente para no mandarle la
@@ -75,6 +101,11 @@ export default async function DashboardPage() {
       responsableDelPerfil={perfil?.nombre ?? null}
       areaDelPerfil={perfil?.area ?? null}
       misOkrIds={misOkrIds}
+      okrsTrimestrales={(okrsTrimData ?? []) as OkrTrimestral[]}
+      okrsAnuales={(okrsAnualesData ?? []) as OkrAnual[]}
+      clientes={(clientesData ?? []) as Cliente[]}
+      personas={(personasData ?? []) as UsuarioAutorizado[]}
+      puedeCrear={perfil ? perfil.rol !== "lectura" : false}
     />
   );
 }

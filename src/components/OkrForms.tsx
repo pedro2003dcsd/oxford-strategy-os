@@ -514,15 +514,50 @@ export function EditOkrTrimestralForm({
   );
 }
 
-export function NewOkrTrimestralForm({
+export function NewOkrTrimestralModal({
   okrsAnuales,
   personas,
+  triggerLabel,
+  triggerClassName,
 }: {
   okrsAnuales: OkrAnual[];
   personas: UsuarioAutorizado[];
+  triggerLabel: string;
+  triggerClassName: string;
+}) {
+  return (
+    <Modal
+      titulo="Nuevo OKR trimestral"
+      triggerLabel={triggerLabel}
+      triggerClassName={triggerClassName}
+    >
+      {(cerrar) => (
+        <NewOkrTrimestralForm
+          okrsAnuales={okrsAnuales}
+          personas={personas}
+          onDone={cerrar}
+        />
+      )}
+    </Modal>
+  );
+}
+
+export function NewOkrTrimestralForm({
+  okrsAnuales,
+  personas,
+  onDone,
+}: {
+  okrsAnuales: OkrAnual[];
+  personas: UsuarioAutorizado[];
+  /** Si viene, cierra el modal cuando el alta sale bien. */
+  onDone?: () => void;
 }) {
   const [state, formAction, pending] = useActionState<FormActionState, FormData>(
-    createOkrTrimestral,
+    async (prev, formData) => {
+      const result = await createOkrTrimestral(prev, formData);
+      if (!result?.error) onDone?.();
+      return result;
+    },
     undefined
   );
   return (

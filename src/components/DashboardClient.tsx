@@ -3,13 +3,23 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { AREAS, TRIMESTRES } from "@/lib/types";
-import type { CheckIn, KeyResultCompleto, ProyectoSolop } from "@/lib/types";
+import type {
+  CheckIn,
+  Cliente,
+  KeyResultCompleto,
+  OkrAnual,
+  OkrTrimestral,
+  ProyectoSolop,
+  UsuarioAutorizado,
+} from "@/lib/types";
 import { hasAlertaRentabilidad, numerarKrsPorObjetivo } from "@/lib/kr-logic";
 import { tieneAlertaRentabilidad, advertenciaHoras } from "@/lib/solop-logic";
 import { responsablesDe } from "@/lib/personas";
 import { useResponsable } from "@/lib/use-responsable";
 import { KrCard } from "@/components/KrCard";
 import { KrDrawer } from "@/components/KrDrawer";
+import { KrModal } from "@/components/KrModal";
+import { NewOkrTrimestralModal } from "@/components/OkrForms";
 import { EstrellaPolar } from "@/components/EstrellaPolar";
 
 const AREA_ORDER = [...AREAS, "Sin área asignada"];
@@ -78,10 +88,25 @@ export function DashboardClient({
   responsableDelPerfil = null,
   areaDelPerfil = null,
   misOkrIds = null,
+  okrsTrimestrales = [],
+  okrsAnuales = [],
+  clientes = [],
+  personas = [],
+  puedeCrear = false,
 }: {
   krs: KeyResultCompleto[];
   checkIns?: CheckIn[];
   proyectos?: ProyectoSolop[];
+  /** Para el alta desde el Dashboard: crear un KR necesita elegir su OKR
+   * trimestral; crear un OKR trimestral, opcionalmente su OKR anual. Vienen
+   * del server para no pedirlos desde el cliente en una segunda vuelta. */
+  okrsTrimestrales?: OkrTrimestral[];
+  okrsAnuales?: OkrAnual[];
+  clientes?: Cliente[];
+  personas?: UsuarioAutorizado[];
+  /** Falso para el rol lectura: sin permiso de escritura no se muestran los
+   * botones de alta, porque la acción los rechazaría igual. */
+  puedeCrear?: boolean;
   /** Viene de la cuenta con la que se entró. Si está, manda sobre el
    * selector manual: nadie tiene que decir quién es si ya se logueó. */
   responsableDelPerfil?: string | null;
@@ -224,6 +249,26 @@ export function DashboardClient({
         <div className="flex flex-wrap items-center gap-3">
           <FilterTabs options={TRIM_OPTIONS} value={trimestre} onChange={setTrimestre} />
           <FilterTabs options={AREA_OPTIONS} value={area} onChange={setArea} />
+
+          {/* Alta desde el Dashboard: antes había que ir a Alineación para
+              crear cualquier cosa. Acá se crea sin salir de la pantalla en la
+              que todos caen primero. */}
+          {puedeCrear && (
+            <div className="ml-auto flex items-center gap-2">
+              <NewOkrTrimestralModal
+                okrsAnuales={okrsAnuales}
+                personas={personas}
+                triggerLabel="+ OKR trimestral"
+                triggerClassName="rounded-full border border-linea px-3 py-1.5 text-xs font-medium text-tenue transition hover:border-oxford/50 hover:text-foreground"
+              />
+              <KrModal
+                okrsTrimestrales={okrsTrimestrales}
+                clientes={clientes}
+                triggerLabel="+ Key Result"
+                triggerClassName="rounded-full bg-oxford px-3 py-1.5 text-xs font-medium text-white transition hover:bg-oxford-fuerte"
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
