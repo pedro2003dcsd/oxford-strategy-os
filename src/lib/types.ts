@@ -68,6 +68,9 @@ export interface OkrAnual {
   responsable_id: string | null;
   es_colaborativo: boolean;
   areas_involucradas: Area[];
+  /** Posición del cuadro en el mapa. Null hasta que alguien lo mueve. */
+  pos_x: number | null;
+  pos_y: number | null;
   created_at: string;
 }
 
@@ -84,6 +87,9 @@ export interface OkrTrimestral {
   responsable_id: string | null;
   es_colaborativo: boolean;
   areas_involucradas: Area[];
+  /** Posición del cuadro en el mapa. Null hasta que alguien lo mueve. */
+  pos_x: number | null;
+  pos_y: number | null;
   created_at: string;
 }
 

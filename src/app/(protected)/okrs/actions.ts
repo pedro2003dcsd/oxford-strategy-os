@@ -528,6 +528,21 @@ export async function deleteKrAnual(krAnualId: string): Promise<FormActionState>
 // el que se quería.
 // ------------------------------------------------------------
 
+/** Guarda dónde quedó un cuadro en el mapa. No pasa por el historial ni
+ * revalida: mover algo es cosa de la vista, no un cambio del objetivo, y
+ * refrescar en cada gota del arrastre pelearía con la posición local. */
+export async function moverNodo(
+  tipo: "anual" | "trimestral",
+  id: string,
+  x: number,
+  y: number
+) {
+  if (!(await puedeEscribir())) return;
+  const supabase = await createClient();
+  const tabla = tipo === "anual" ? "okr_anual" : "okr_trimestral";
+  await supabase.from(tabla).update({ pos_x: x, pos_y: y }).eq("id", id);
+}
+
 export async function vincularOkr(
   okrTrimestralId: string,
   okrAnualId: string
