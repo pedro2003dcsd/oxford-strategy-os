@@ -543,6 +543,25 @@ export async function moverNodo(
   await supabase.from(tabla).update({ pos_x: x, pos_y: y }).eq("id", id);
 }
 
+/** Guarda de una sola vez la posición de muchos cuadros, para "Ordenar
+ * automáticamente": una sola llamada en vez de N. No revalida por lo mismo
+ * que moverNodo. */
+export async function moverNodosBatch(
+  items: { tipo: "anual" | "trimestral"; id: string; x: number; y: number }[]
+) {
+  if (!(await puedeEscribir())) return;
+  if (items.length === 0) return;
+  const supabase = await createClient();
+  await Promise.all(
+    items.map((it) =>
+      supabase
+        .from(it.tipo === "anual" ? "okr_anual" : "okr_trimestral")
+        .update({ pos_x: it.x, pos_y: it.y })
+        .eq("id", it.id)
+    )
+  );
+}
+
 export async function vincularOkr(
   okrTrimestralId: string,
   okrAnualId: string
