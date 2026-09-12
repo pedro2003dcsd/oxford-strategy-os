@@ -54,7 +54,8 @@ type Punto = { x: number; y: number };
 type NodoKey = string; // "A:<id>" | "T:<id>"
 type Seleccion = { kind: Kind; id: string } | null;
 
-const ANCHO_CUADRO = 320;
+const ANCHO_CUADRO = 360;
+const SEP_DEFECTO = 260; // separación vertical del acomodo por defecto
 const UMBRAL = 4; // px para distinguir click de arrastre
 const MIN_ESCALA = 0.25;
 const MAX_ESCALA = 2;
@@ -107,10 +108,10 @@ export function MapaAlineacion({
   const posPorDefecto = useMemo(() => {
     const m: Record<NodoKey, Punto> = {};
     okrsAnuales.forEach((o, i) => {
-      m[`A:${o.id}`] = { x: 40, y: 40 + i * 240 };
+      m[`A:${o.id}`] = { x: 40, y: 40 + i * SEP_DEFECTO };
     });
     okrsTrimestrales.forEach((o, i) => {
-      m[`T:${o.id}`] = { x: 40 + ANCHO_CUADRO + 240, y: 40 + i * 240 };
+      m[`T:${o.id}`] = { x: 40 + ANCHO_CUADRO + 240, y: 40 + i * SEP_DEFECTO };
     });
     return m;
   }, [okrsAnuales, okrsTrimestrales]);
@@ -168,6 +169,18 @@ export function MapaAlineacion({
     }
     return m;
   }, [keyResults]);
+
+  // Quién tiene al menos una relación de su tipo. Lo que no esté acá se marca
+  // "Sin alineación" (sólo visual, para detectar huecos de un vistazo).
+  const alineados = useMemo(
+    () => ({
+      okrA: new Set(okrLinks.map((l) => l.okr_anual_id)),
+      okrT: new Set(okrLinks.map((l) => l.okr_trimestral_id)),
+      krA: new Set(krLinks.map((l) => l.kr_anual_id)),
+      krT: new Set(krLinks.map((l) => l.kr_trimestral_id)),
+    }),
+    [okrLinks, krLinks]
+  );
 
   // clientX/Y → coordenadas del mundo (sin la escala). worldRect ya incluye
   // el pan, así que sólo hace falta dividir por la escala.
@@ -544,8 +557,19 @@ export function MapaAlineacion({
   const btnTool =
     "rounded-md px-2 py-1 text-xs font-medium text-tenue transition hover:bg-linea/60 hover:text-foreground";
 
-  /** El punto de conexión, con feedback durante el arrastre. */
-  function Punto2({ kind, id, className }: { kind: Kind; id: string; className?: string }) {
+  /** El punto de conexión, con feedback durante el arrastre. Punteado y
+   * tenue cuando el nodo no tiene ninguna relación. */
+  function Punto2({
+    kind,
+    id,
+    desalineado,
+    className,
+  }: {
+    kind: Kind;
+    id: string;
+    desalineado?: boolean;
+    className?: string;
+  }) {
     const key = claveAncla(kind, id);
     const esFuente = conectando?.kind === kind && conectando?.id === id;
     const compat = conectando && !esFuente && compatibles(kind, conectando.kind);
@@ -555,9 +579,16 @@ export function MapaAlineacion({
       <span
         data-anchor-key={key}
         onPointerDown={puedeEditar ? (e) => empezarConectar(e, kind, id) : undefined}
-        title={puedeEditar ? "Arrastrá hasta otro punto para conectar" : undefined}
+        title={
+          desalineado
+            ? "Sin alineación — arrastrá para conectar"
+            : puedeEditar
+              ? "Arrastrá hasta otro punto para conectar"
+              : undefined
+        }
         className={clsx(
           "block h-3 w-3 shrink-0 rounded-full border-2 border-oxford bg-panel transition",
+          desalineado && !conectando && "border-dashed border-oxford/50",
           puedeEditar && "cursor-crosshair touch-none",
           !conectando && puedeEditar && "hover:scale-125",
           incompat && "opacity-20",
@@ -566,6 +597,15 @@ export function MapaAlineacion({
           className
         )}
       />
+    );
+  }
+
+  /** Chip discreto para un OKR sin ninguna relación. */
+  function ChipSinAlineacion() {
+    return (
+      <span className="shrink-0 rounded border border-dashed border-linea px-1 text-[9px] font-medium text-tenue">
+        Sin alineación
+      </span>
     );
   }
 
@@ -596,7 +636,7 @@ export function MapaAlineacion({
         onPointerDown={(e) => cardPointerDown(e, key, nodeKind, tipo, id, { x, y })}
         style={{ left: x, top: y, width: ANCHO_CUADRO }}
         className={clsx(
-          "absolute select-none rounded-xl border bg-panel shadow-md transition-shadow",
+          "absolute select-none rounded-xl bg-panel shadow-md transition-shadow",
           acento,
           puedeEditar && "cursor-grab active:cursor-grabbing",
           dragCard?.key === key && "z-30 shadow-xl",
@@ -613,8 +653,8 @@ export function MapaAlineacion({
   }
 
   const hint = puedeEditar
-    ? "Arrastrá los cuadros para acomodarlos · tirá de un punto ● a otro para conectar · clic para enfocar · fondo vacío para desplazar"
-    : "Clic en un objetivo o KR para enfocar sus relaciones · fondo vacío para desplazar";
+    ? "Arrastrá para mover · ● para conectar · clic para enfocar · arrastrá el fondo para desplazarte"
+    : "Clic para enfocar · arrastrá el fondo para desplazarte";
 
   return (
     <div>
@@ -714,8 +754,10 @@ export function MapaAlineacion({
           <svg className="pointer-events-none absolute inset-0" width={tamano.w} height={tamano.h}>
             {lineas.map((l) => {
               const enfocada = foco?.lineKeys.has(l.key) ?? false;
-              const opacidadBase = l.kr ? 0.4 : 0.6;
-              const op = foco ? (enfocada ? 0.95 : 0.08) : opacidadBase;
+              // Sin selección las conexiones quedan tenues para no ensuciar el
+              // mapa; con selección, el foco manda (fuertes vs. casi invisibles).
+              const opacidadBase = l.kr ? 0.28 : 0.42;
+              const op = foco ? (enfocada ? 0.95 : 0.07) : opacidadBase;
               return (
                 <path
                   key={l.key}
@@ -793,16 +835,21 @@ export function MapaAlineacion({
                 id={oa.id}
                 x={p.x}
                 y={p.y}
-                acento="border-oxford/40"
+                acento="border-2 border-oxford/60"
                 seleccionado={estaSel("okrA", oa.id)}
                 resaltado={estaRel("okrA", oa.id)}
               >
-                <div className="flex items-start justify-between gap-1 rounded-t-xl border-b border-linea bg-oxford-suave/60 px-3 py-2">
+                <div className="flex items-start justify-between gap-1 rounded-t-xl border-b border-oxford/20 bg-oxford-suave px-3 py-2">
                   <div className="min-w-0">
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-oxford">
-                      OKR anual
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-oxford">
+                        OKR anual
+                      </span>
+                      {!alineados.okrA.has(oa.id) && <ChipSinAlineacion />}
                     </span>
-                    <p className="truncate text-sm font-semibold">{oa.titulo}</p>
+                    <p className="line-clamp-2 text-sm font-semibold leading-snug">
+                      {oa.titulo}
+                    </p>
                     {oa.responsable && (
                       <p className="truncate text-xs text-tenue">{oa.responsable}</p>
                     )}
@@ -818,7 +865,7 @@ export function MapaAlineacion({
                         triggerClassName={btnMini}
                       />
                     )}
-                    <Punto2 kind="okrA" id={oa.id} />
+                    <Punto2 kind="okrA" id={oa.id} desalineado={!alineados.okrA.has(oa.id)} />
                   </div>
                 </div>
                 <div className="space-y-1 px-3 py-2">
@@ -832,7 +879,7 @@ export function MapaAlineacion({
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => seleccionarKr(e, "krA", kr.id)}
                         className={clsx(
-                          "flex cursor-pointer items-center gap-1.5 rounded px-1 text-sm transition",
+                          "flex cursor-pointer items-start gap-1.5 rounded px-1 text-sm transition",
                           estaSel("krA", kr.id)
                             ? "bg-oxford/15 ring-1 ring-oxford"
                             : estaRel("krA", kr.id)
@@ -843,7 +890,7 @@ export function MapaAlineacion({
                         <span className="shrink-0 rounded bg-linea/60 px-1.5 py-0.5 text-[11px] font-semibold text-tenue">
                           KR{i + 1}
                         </span>
-                        <span className="min-w-0 flex-1 truncate">{kr.titulo}</span>
+                        <span className="min-w-0 flex-1 line-clamp-2 leading-snug">{kr.titulo}</span>
                         <span className="shrink-0 text-xs text-tenue">{formatearMeta(kr)}</span>
                         {puedeEditar && (
                           <KrAnualModal
@@ -853,7 +900,7 @@ export function MapaAlineacion({
                             triggerClassName={btnMini}
                           />
                         )}
-                        <Punto2 kind="krA" id={kr.id} />
+                        <Punto2 kind="krA" id={kr.id} desalineado={!alineados.krA.has(kr.id)} />
                       </div>
                     ))
                   )}
@@ -880,18 +927,26 @@ export function MapaAlineacion({
                 id={ot.id}
                 x={p.x}
                 y={p.y}
-                acento="border-linea"
+                acento="border border-linea"
                 seleccionado={estaSel("okrT", ot.id)}
                 resaltado={estaRel("okrT", ot.id)}
               >
-                <div className="flex items-start justify-between gap-1 rounded-t-xl border-b border-linea bg-linea/40 px-3 py-2">
+                <div className="flex items-start justify-between gap-1 rounded-t-xl border-b border-linea bg-linea/30 px-3 py-2">
                   <div className="flex min-w-0 items-start gap-1.5">
-                    <Punto2 kind="okrT" id={ot.id} className="mt-1" />
+                    <Punto2
+                      kind="okrT"
+                      id={ot.id}
+                      desalineado={!alineados.okrT.has(ot.id)}
+                      className="mt-1"
+                    />
                     <div className="min-w-0">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-tenue">
-                        OKR trimestral · {ot.trimestre} {ot.anio}
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-tenue">
+                          OKR trimestral · {ot.trimestre} {ot.anio}
+                        </span>
+                        {!alineados.okrT.has(ot.id) && <ChipSinAlineacion />}
                       </span>
-                      <p className="truncate text-sm font-semibold">
+                      <p className="line-clamp-2 text-sm font-semibold leading-snug">
                         <span className="mr-1 rounded bg-linea/70 px-1.5 py-0.5 text-[10px] font-semibold">
                           {ot.area}
                         </span>
@@ -913,7 +968,7 @@ export function MapaAlineacion({
                 </div>
                 <div className="space-y-1 px-3 py-2">
                   {krs.length === 0 ? (
-                    <p className="text-xs text-tenue">Sin Key Results.</p>
+                    <p className="text-xs text-tenue">Sin KR trimestrales.</p>
                   ) : (
                     krs.map((kr, i) => (
                       <div
@@ -922,7 +977,7 @@ export function MapaAlineacion({
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => seleccionarKr(e, "krT", kr.id)}
                         className={clsx(
-                          "flex cursor-pointer items-center gap-1.5 rounded px-1 text-sm transition",
+                          "flex cursor-pointer items-start gap-1.5 rounded px-1 text-sm transition",
                           estaSel("krT", kr.id)
                             ? "bg-oxford/15 ring-1 ring-oxford"
                             : estaRel("krT", kr.id)
@@ -930,11 +985,11 @@ export function MapaAlineacion({
                               : "hover:bg-linea/40"
                         )}
                       >
-                        <Punto2 kind="krT" id={kr.id} />
+                        <Punto2 kind="krT" id={kr.id} desalineado={!alineados.krT.has(kr.id)} />
                         <span className="shrink-0 rounded bg-linea/60 px-1.5 py-0.5 text-[11px] font-semibold text-tenue">
                           KR{i + 1}
                         </span>
-                        <span className="min-w-0 flex-1 truncate">{kr.titulo}</span>
+                        <span className="min-w-0 flex-1 line-clamp-2 leading-snug">{kr.titulo}</span>
                         <SemaforoBadge estado={kr.estado_semaforo} compact />
                         <span className="shrink-0 text-xs text-tenue">{progresoPct(kr)}%</span>
                       </div>
@@ -944,7 +999,7 @@ export function MapaAlineacion({
                     <KrModal
                       okrFijo={ot}
                       clientes={clientes}
-                      triggerLabel="+ KR"
+                      triggerLabel="+ KR trimestral"
                       triggerClassName={btnAlta}
                     />
                   )}
@@ -955,8 +1010,20 @@ export function MapaAlineacion({
         </div>
 
         {/* Ayuda */}
-        <div className="pointer-events-none absolute bottom-2 left-3 z-40 max-w-[70%] text-[11px] text-tenue">
+        <div className="pointer-events-none absolute bottom-2 left-3 z-40 max-w-[60%] text-[11px] text-tenue">
           {hint}
+        </div>
+
+        {/* Leyenda: qué conecta con qué. Debajo de los controles. */}
+        <div className="pointer-events-none absolute right-3 top-14 z-40 flex items-center gap-3 rounded-md border border-linea bg-panel/90 px-2 py-1 text-[10px] text-tenue backdrop-blur">
+          <span className="flex items-center gap-1.5">
+            <span className="h-[3px] w-4 rounded-full bg-oxford/70" />
+            OKR ↔ OKR
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-px w-4 rounded-full bg-oxford/50" />
+            KR ↔ KR
+          </span>
         </div>
       </div>
     </div>

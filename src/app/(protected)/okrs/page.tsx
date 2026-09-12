@@ -53,11 +53,9 @@ export default async function OkrsPage() {
       <header className="space-y-1">
         <h1 className="text-xl font-semibold">Alineación estratégica</h1>
         <p className="text-sm text-tenue">
-          El mapa de OKRs anuales y trimestrales. Cada OKR/KR trimestral puede
-          empujar a más de un anual.
           {puedeEditar
-            ? " Arrastrá del punto de un nodo hasta el del lado opuesto para conectar; tocá la ✕ de una línea para desvincular."
-            : ""}
+            ? "Conectá OKR trimestral ↔ OKR anual y KR trimestral ↔ KR anual. Arrastrá desde cualquier punto ● para crear una relación."
+            : "Mapa de OKRs anuales y trimestrales y sus relaciones."}
         </p>
       </header>
 
