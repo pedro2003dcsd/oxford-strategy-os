@@ -9,6 +9,7 @@ import type {
   KeyResultCompleto,
   OkrTrimestral,
   ProyectoSolop,
+  Trimestre,
   UsuarioAutorizado,
 } from "@/lib/types";
 import { hasAlertaRentabilidad, numerarKrsPorObjetivo } from "@/lib/kr-logic";
@@ -80,6 +81,15 @@ function StatPill({
 const TRIM_OPTIONS = ["Todos", ...TRIMESTRES] as const;
 const AREA_OPTIONS = ["Todas", ...AREAS] as const;
 
+/** Sección fija donde caen los objetivos colaborativos, una sola vez. */
+const COLABORATIVOS = "COLABORATIVOS";
+
+/** El trimestre según el mes actual: Ene-Mar Q1, Abr-Jun Q2, Jul-Sep Q3,
+ * Oct-Dic Q4. No se hardcodea: se calcula de la fecha. */
+function trimestreActual(): Trimestre {
+  return TRIMESTRES[Math.floor(new Date().getMonth() / 3)];
+}
+
 export function DashboardClient({
   krs,
   checkIns = [],
@@ -118,7 +128,9 @@ export function DashboardClient({
    * cero objetivos sin dar ningún error. */
   misOkrIds?: string[] | null;
 }) {
-  const [trimestre, setTrimestre] = useState<(typeof TRIM_OPTIONS)[number]>("Todos");
+  // Arranca en el trimestre en curso (se puede volver a "Todos" a mano).
+  const [trimestre, setTrimestre] =
+    useState<(typeof TRIM_OPTIONS)[number]>(trimestreActual());
   const [area, setArea] = useState<(typeof AREA_OPTIONS)[number]>(
     AREA_OPTIONS.includes(areaDelPerfil as (typeof AREA_OPTIONS)[number])
       ? (areaDelPerfil as (typeof AREA_OPTIONS)[number])
@@ -149,11 +161,22 @@ export function DashboardClient({
     return map;
   }, [proyectos]);
 
+  /** Bloqueo ACTUAL de cada KR: el que trae el último check-in, no un bloqueo
+   * viejo arrastrado. Si el último check-in del KR ya no tiene comentario, no
+   * se muestra nada aunque hubiera bloqueos en check-ins anteriores. */
   const bloqueoPorKr = useMemo(() => {
-    const map = new Map<string, CheckIn>();
-    // checkIns viene ordenado ascendente: el último con comentario gana.
+    // El check-in más reciente de cada KR, comparando por fecha para no
+    // depender del orden en que llegan.
+    const ultimo = new Map<string, CheckIn>();
     for (const c of checkIns) {
-      if (c.comentario_bloqueos) map.set(c.kr_id, c);
+      const prev = ultimo.get(c.kr_id);
+      if (!prev || new Date(c.creado_at) >= new Date(prev.creado_at)) {
+        ultimo.set(c.kr_id, c);
+      }
+    }
+    const map = new Map<string, CheckIn>();
+    for (const [krId, c] of ultimo) {
+      if (c.comentario_bloqueos) map.set(krId, c);
     }
     return map;
   }, [checkIns]);
@@ -179,10 +202,12 @@ export function DashboardClient({
 
   const visibles = useMemo(() => {
     /** Un KR está "en alerta" si su semáforo no está en verde, si tiene alerta
-     * de rentabilidad, o si su proyecto en SOLOP se come las horas. */
+     * de rentabilidad, si su proyecto en SOLOP se come las horas, o si tiene
+     * un bloqueo actual (según el último check-in). */
     function enAlerta(kr: KeyResultCompleto): boolean {
       if (kr.estado_semaforo !== "verde") return true;
       if (hasAlertaRentabilidad(kr)) return true;
+      if (bloqueoPorKr.has(kr.id)) return true;
       const p = proyectoPorKr.get(kr.id);
       return Boolean(p && (tieneAlertaRentabilidad(p) || advertenciaHoras(p)));
     }
@@ -206,7 +231,7 @@ export function DashboardClient({
     });
 
     return { filtrados: base, visibles: soloAlertas ? base.filter(enAlerta) : base };
-  }, [krs, trimestre, area, misObjetivos, yo, misOkrIds, soloAlertas, proyectoPorKr]);
+  }, [krs, trimestre, area, misObjetivos, yo, misOkrIds, soloAlertas, proyectoPorKr, bloqueoPorKr]);
 
   const counts = useMemo(
     () =>
@@ -221,19 +246,28 @@ export function DashboardClient({
     [visibles]
   );
 
+  /** Estructura estable: los KR propios de un área van en la sección de su
+   * área; los colaborativos van UNA sola vez a la sección COLABORATIVOS al
+   * final. Ningún KR aparece dos veces. El orden dentro de cada sección es el
+   * de `visibles.visibles`, que conserva el orden de la lista original: los
+   * filtros ocultan, no reordenan. */
   const grupos = useMemo(() => {
     const porArea = new Map<string, KeyResultCompleto[]>();
+    const colaborativos: KeyResultCompleto[] = [];
     for (const kr of visibles.visibles) {
-      // Un colaborativo cae en cada área que involucra: cada equipo lo ve en
-      // su sección, distinguido con el chip de la tarjeta.
-      for (const a of areasDe(kr)) {
+      if (kr.okr_trimestral?.es_colaborativo) {
+        colaborativos.push(kr);
+      } else {
+        const a = kr.okr_trimestral?.area ?? "Sin área asignada";
         if (!porArea.has(a)) porArea.set(a, []);
         porArea.get(a)!.push(kr);
       }
     }
-    return [...porArea.entries()].sort(
+    const secciones: [string, KeyResultCompleto[]][] = [...porArea.entries()].sort(
       (a, b) => AREA_ORDER.indexOf(a[0]) - AREA_ORDER.indexOf(b[0])
     );
+    if (colaborativos.length > 0) secciones.push([COLABORATIVOS, colaborativos]);
+    return secciones;
   }, [visibles]);
 
   const seleccionado = krs.find((k) => k.id === krAbierto) ?? null;

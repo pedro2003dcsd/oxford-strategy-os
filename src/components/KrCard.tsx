@@ -103,7 +103,10 @@ export function KrCard({
       )}
 
       {ultimoBloqueo?.comentario_bloqueos && (
-        <p className="rounded-md bg-amber-500/10 px-2 py-1.5 text-xs leading-snug text-amber-800 dark:text-amber-300">
+        // Resumen: máximo ~3 líneas para que un comentario largo no estire la
+        // card. El texto completo queda en el Drawer del KR. No se corta el
+        // dato, sólo su presentación.
+        <p className="line-clamp-3 break-words rounded-md bg-amber-500/10 px-2 py-1.5 text-xs leading-snug text-amber-800 dark:text-amber-300">
           <span className="font-semibold">⚠️ Bloqueo:</span>{" "}
           {ultimoBloqueo.comentario_bloqueos}
         </p>
