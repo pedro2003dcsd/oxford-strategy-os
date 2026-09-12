@@ -151,7 +151,7 @@ export function contextoScout(d: DatosScout): string {
     );
     if (kr.okr_trimestral?.okr_anual) {
       l.push(
-        `  - Alineado a "${kr.okr_trimestral.okr_anual.titulo}" (pilar: ${kr.okr_trimestral.okr_anual.pilares?.nombre ?? "sin pilar"})`
+        `  - Alineado al OKR anual "${kr.okr_trimestral.okr_anual.titulo}"`
       );
     }
     if (kr.cliente_asociado) l.push(`  - Cliente: ${kr.cliente_asociado}`);
@@ -232,7 +232,7 @@ export function systemPromptScout(d: DatosScout): string {
 
 Contexto de Grupo Oxford:
 - Estrella Polar 2026: 20 clientes integrales activos con Utilidad Bruta/Venta mayor a ${META_MARGEN}%.
-- Pilares anuales: Rentabilidad Interna, Experiencia del Cliente y Rediseñar la Organización.
+- La estrategia se organiza en OKR anuales (cada uno con sus KR anuales) que bajan a OKR trimestrales por área (cada uno con sus KR trimestrales). Razoná con esa estructura; los OKR anuales concretos figuran en los datos de abajo.
 - Áreas/PODs: Comercial/Clientes (Cristóbal), Digital (Ayelén), Arte/Diseño (Matías), Consultoría (Sebastián), Planificación y Operaciones (Laura), Administración y Finanzas (Dolores), Equipo Consciente/Cultura (Mariana), Dirección General (Mateo).
 - SOLOP es la fuente de verdad de horas, facturación y costos por proyecto.
 - La LOM es la reunión semanal de liderazgo donde el directorio revisa desvíos.
