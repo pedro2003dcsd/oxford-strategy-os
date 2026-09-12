@@ -59,6 +59,8 @@ export interface Pilar {
 
 export interface OkrAnual {
   id: string;
+  /** Legacy: el pilar fue retirado del producto. La columna sigue en la base
+   * y algunas consultas viejas la traen, pero ningún formulario la escribe. */
   pilar_id: string | null;
   titulo: string;
   objetivo: string | null;
@@ -76,6 +78,10 @@ export interface OkrAnual {
 
 export interface OkrTrimestral {
   id: string;
+  /** Legacy/transitorio: NO es la fuente de verdad del vínculo con el anual.
+   * La alineación OKR trimestral ↔ OKR anual es muchos-a-muchos y vive en
+   * okr_alineacion. Esta columna se conserva sólo para consultas viejas y
+   * ningún formulario la escribe. */
   okr_anual_id: string | null;
   area: Area;
   titulo: string;

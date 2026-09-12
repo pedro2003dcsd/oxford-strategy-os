@@ -2,10 +2,12 @@
 -- Posición de cada nodo en el mapa de Alineación
 --
 -- El mapa deja de ser dos columnas fijas y pasa a ser un lienzo tipo mapa
--- conceptual: cada OKR (anual o trimestral) es un cuadro que se arrastra a
--- donde uno quiera y se conecta con cualquier otro. Para que el acomodo
--- quede guardado y todos vean el mismo mapa, se guarda la posición (x, y) de
--- cada cuadro.
+-- conceptual: cada OKR (anual o trimestral) es un cuadro que se arrastra
+-- libremente. Las relaciones son sólo entre niveles equivalentes —OKR anual
+-- ↔ OKR trimestral y KR anual ↔ KR trimestral, nunca OKR con KR— y viven en
+-- okr_alineacion / kr_alineacion, no acá. Acá sólo se guarda la posición
+-- (x, y) de cada cuadro para que el acomodo quede fijo y todos vean el mismo
+-- mapa.
 --
 -- Nullable: un OKR recién creado no tiene posición hasta que alguien lo
 -- mueve; mientras tanto el mapa lo ubica solo con una posición por defecto.

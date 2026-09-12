@@ -7,7 +7,6 @@ import type {
   CheckIn,
   Cliente,
   KeyResultCompleto,
-  OkrAnual,
   OkrTrimestral,
   ProyectoSolop,
   UsuarioAutorizado,
@@ -89,7 +88,6 @@ export function DashboardClient({
   areaDelPerfil = null,
   misOkrIds = null,
   okrsTrimestrales = [],
-  okrsAnuales = [],
   clientes = [],
   personas = [],
   puedeCrear = false,
@@ -98,10 +96,9 @@ export function DashboardClient({
   checkIns?: CheckIn[];
   proyectos?: ProyectoSolop[];
   /** Para el alta desde el Dashboard: crear un KR necesita elegir su OKR
-   * trimestral; crear un OKR trimestral, opcionalmente su OKR anual. Vienen
-   * del server para no pedirlos desde el cliente en una segunda vuelta. */
+   * trimestral. Vienen del server para no pedirlos desde el cliente en una
+   * segunda vuelta. */
   okrsTrimestrales?: OkrTrimestral[];
-  okrsAnuales?: OkrAnual[];
   clientes?: Cliente[];
   personas?: UsuarioAutorizado[];
   /** Falso para el rol lectura: sin permiso de escritura no se muestran los
@@ -256,7 +253,6 @@ export function DashboardClient({
           {puedeCrear && (
             <div className="ml-auto flex items-center gap-2">
               <NewOkrTrimestralModal
-                okrsAnuales={okrsAnuales}
                 personas={personas}
                 triggerLabel="+ OKR trimestral"
                 triggerClassName="rounded-full border border-linea px-3 py-1.5 text-xs font-medium text-tenue transition hover:border-oxford/50 hover:text-foreground"
@@ -264,7 +260,7 @@ export function DashboardClient({
               <KrModal
                 okrsTrimestrales={okrsTrimestrales}
                 clientes={clientes}
-                triggerLabel="+ Key Result"
+                triggerLabel="+ KR trimestral"
                 triggerClassName="rounded-full bg-oxford px-3 py-1.5 text-xs font-medium text-white transition hover:bg-oxford-fuerte"
               />
             </div>

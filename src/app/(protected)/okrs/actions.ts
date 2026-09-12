@@ -17,45 +17,10 @@ function optionalStr(formData: FormData, key: string) {
   return v || null;
 }
 
-/** Alinea un OKR trimestral huérfano a un OKR anual sin abrir el formulario
- * completo: en la práctica los objetivos se crean primero y se alinean
- * después, y esa fricción hace que queden sueltos para siempre. */
-export async function alinearOkrTrimestral(
-  okrTrimestralId: string,
-  okrAnualId: string | null
-) {
-  if (!(await puedeEscribir())) return;
-
-  const supabase = await createClient();
-  await supabase
-    .from("okr_trimestral")
-    .update({ okr_anual_id: okrAnualId })
-    .eq("id", okrTrimestralId);
-  revalidatePath("/okrs");
-  revalidatePath("/");
-}
-
-export async function createPilar(
-  _prevState: FormActionState,
-  formData: FormData
-): Promise<FormActionState> {
-  const veto = await vetoDeEscritura();
-  if (veto) return { error: veto };
-
-  const nombre = str(formData, "nombre");
-  if (!nombre) return { error: "El nombre del pilar es obligatorio." };
-
-  const supabase = await createClient();
-  const { error } = await supabase.from("pilares").insert({
-    nombre,
-    descripcion: optionalStr(formData, "descripcion"),
-    anio: Number(formData.get("anio")) || 2026,
-  });
-  if (error) return { error: error.message };
-
-  revalidatePath("/okrs");
-  return undefined;
-}
+// Nota: la alineación OKR trimestral ↔ OKR anual es muchos-a-muchos y vive en
+// okr_alineacion (ver vincularOkr/desvincularOkr). La columna legacy
+// okr_trimestral.okr_anual_id ya no es la fuente de verdad y ningún formulario
+// la escribe; se conserva sólo para no romper consultas viejas.
 
 export async function createOkrAnual(
   _prevState: FormActionState,
@@ -74,7 +39,6 @@ export async function createOkrAnual(
   const { data: creado, error } = await supabase
     .from("okr_anual")
     .insert({
-      pilar_id: optionalStr(formData, "pilar_id"),
       titulo,
       objetivo: optionalStr(formData, "objetivo"),
       responsable_id: responsableId,
@@ -113,7 +77,6 @@ export async function updateOkrAnual(
   const { error } = await supabase
     .from("okr_anual")
     .update({
-      pilar_id: optionalStr(formData, "pilar_id"),
       titulo,
       objetivo: optionalStr(formData, "objetivo"),
       responsable_id: responsableId,
@@ -176,9 +139,9 @@ export async function createOkrTrimestral(
   const { data: creado, error } = await supabase
     .from("okr_trimestral")
     .insert({
-      // okr_anual_id es opcional a propósito: un área puede alinear su OKR
-      // trimestral más tarde sin bloquear el arranque del trimestre.
-      okr_anual_id: optionalStr(formData, "okr_anual_id"),
+      // La alineación a un OKR anual no se setea acá: es muchos-a-muchos y se
+      // administra desde el mapa (okr_alineacion). La columna legacy
+      // okr_anual_id queda en null.
       area,
       titulo,
       trimestre,
@@ -353,7 +316,8 @@ export async function updateOkrTrimestral(
     .maybeSingle();
 
   const campos = {
-    okr_anual_id: optionalStr(formData, "okr_anual_id"),
+    // okr_anual_id ya no se toca desde el formulario: la alineación es M:N y
+    // vive en okr_alineacion.
     area,
     titulo,
     trimestre,

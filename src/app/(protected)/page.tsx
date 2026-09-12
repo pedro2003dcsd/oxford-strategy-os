@@ -3,7 +3,6 @@ import type {
   CheckIn,
   Cliente,
   KeyResultCompleto,
-  OkrAnual,
   OkrTrimestral,
   ProyectoSolop,
   UsuarioAutorizado,
@@ -46,7 +45,6 @@ export default async function DashboardPage() {
     { data: checkInsData },
     { data: proyectosData },
     { data: okrsTrimData },
-    { data: okrsAnualesData },
     { data: clientesData },
     { data: personasData },
     perfil,
@@ -60,7 +58,6 @@ export default async function DashboardPage() {
       .from("okr_trimestral")
       .select("*")
       .order("created_at", { ascending: true }),
-    supabase.from("okr_anual").select("*").order("created_at", { ascending: true }),
     supabase.from("clientes").select("*").order("nombre"),
     supabase
       .from("usuarios_autorizados")
@@ -102,7 +99,6 @@ export default async function DashboardPage() {
       areaDelPerfil={perfil?.area ?? null}
       misOkrIds={misOkrIds}
       okrsTrimestrales={(okrsTrimData ?? []) as OkrTrimestral[]}
-      okrsAnuales={(okrsAnualesData ?? []) as OkrAnual[]}
       clientes={(clientesData ?? []) as Cliente[]}
       personas={(personasData ?? []) as UsuarioAutorizado[]}
       puedeCrear={perfil ? perfil.rol !== "lectura" : false}

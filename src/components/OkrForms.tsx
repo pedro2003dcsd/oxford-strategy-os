@@ -4,20 +4,13 @@ import { useActionState, useState } from "react";
 import {
   createOkrAnual,
   createOkrTrimestral,
-  createPilar,
   updateOkrAnual,
   updateOkrTrimestral,
   type FormActionState,
 } from "@/app/(protected)/okrs/actions";
 import { Modal } from "@/components/Modal";
 import { AREAS, TRIMESTRES } from "@/lib/types";
-import type {
-  Area,
-  OkrAnual,
-  OkrTrimestral,
-  Pilar,
-  UsuarioAutorizado,
-} from "@/lib/types";
+import type { Area, OkrAnual, OkrTrimestral, UsuarioAutorizado } from "@/lib/types";
 
 const inputClass =
   "w-full rounded-md border border-linea bg-transparent px-2 py-1.5 text-sm";
@@ -25,80 +18,19 @@ const labelClass = "text-xs font-medium text-tenue";
 const submitClass =
   "rounded-md bg-oxford px-3 py-1.5 text-sm font-medium text-white transition hover:bg-oxford-fuerte disabled:opacity-50";
 
+/** La alineación de un OKR trimestral a los anuales ya no vive en el
+ * formulario: es muchos-a-muchos y se administra desde el mapa de Alineación
+ * (okr_alineacion). Estos formularios editan sólo los datos propios del OKR. */
+const NOTA_ALINEACION =
+  "La alineación a OKR anual se hace en el mapa de Alineación estratégica.";
+
 function ErrorText({ state }: { state: FormActionState }) {
   if (!state?.error) return null;
   return <p className="text-sm text-red-600">{state.error}</p>;
 }
 
-export function NewPilarForm() {
-  const [state, formAction, pending] = useActionState<FormActionState, FormData>(
-    createPilar,
-    undefined
-  );
-  return (
-    <form action={formAction} className="space-y-2">
-      <div className="space-y-1">
-        <label className={labelClass}>Nombre</label>
-        <input name="nombre" required className={inputClass} />
-      </div>
-      <div className="space-y-1">
-        <label className={labelClass}>Descripción</label>
-        <input name="descripcion" className={inputClass} />
-      </div>
-      <div className="space-y-1">
-        <label className={labelClass}>Año</label>
-        <input name="anio" type="number" defaultValue={2026} className={inputClass} />
-      </div>
-      <ErrorText state={state} />
-      <button type="submit" disabled={pending} className={submitClass}>
-        {pending ? "Creando…" : "Crear pilar"}
-      </button>
-    </form>
-  );
-}
-
-export function NewOkrAnualForm({
-  pilares,
-  personas,
-}: {
-  pilares: Pilar[];
-  personas: UsuarioAutorizado[];
-}) {
-  const [state, formAction, pending] = useActionState<FormActionState, FormData>(
-    createOkrAnual,
-    undefined
-  );
-  return (
-    <form action={formAction} className="space-y-2">
-      <div className="space-y-1">
-        <label className={labelClass}>Pilar</label>
-        <select name="pilar_id" required className={inputClass}>
-          {pilares.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nombre}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="space-y-1">
-        <label className={labelClass}>Título del OKR anual</label>
-        <input name="titulo" required className={inputClass} />
-      </div>
-      <div className="space-y-1">
-        <label className={labelClass}>Objetivo</label>
-        <textarea name="objetivo" rows={2} className={inputClass} />
-      </div>
-      <SelectorResponsables personas={personas} />
-      <ErrorText state={state} />
-      <button type="submit" disabled={pending} className={submitClass}>
-        {pending ? "Creando…" : "Crear OKR anual"}
-      </button>
-    </form>
-  );
-}
-
-/** Alta de OKR anual sin pilar. El pilar se está retirando: la jerarquía
- * pasa a ser OKR anual → OKR trimestral, sin un nivel por encima. */
+/** Alta de OKR anual. El pilar fue retirado: la jerarquía es OKR anual →
+ * sus KR anuales, sin un nivel por encima. */
 export function NewOkrAnualModal({
   personas,
   triggerLabel,
@@ -114,12 +46,12 @@ export function NewOkrAnualModal({
       triggerLabel={triggerLabel}
       triggerClassName={triggerClassName}
     >
-      {(cerrar) => <NewOkrAnualSinPilarForm personas={personas} onDone={cerrar} />}
+      {(cerrar) => <NewOkrAnualForm personas={personas} onDone={cerrar} />}
     </Modal>
   );
 }
 
-function NewOkrAnualSinPilarForm({
+function NewOkrAnualForm({
   personas,
   onDone,
 }: {
@@ -356,14 +288,12 @@ function AreaObjetivo({
 
 export function OkrTrimestralModal({
   okr,
-  okrsAnuales,
   personas,
   coResponsablesActuales,
   triggerLabel,
   triggerClassName,
 }: {
   okr: OkrTrimestral;
-  okrsAnuales: OkrAnual[];
   personas: UsuarioAutorizado[];
   coResponsablesActuales: string[];
   triggerLabel: string;
@@ -378,7 +308,6 @@ export function OkrTrimestralModal({
       {(cerrar) => (
         <EditOkrTrimestralForm
           okr={okr}
-          okrsAnuales={okrsAnuales}
           personas={personas}
           coResponsablesActuales={coResponsablesActuales}
           onDone={cerrar}
@@ -390,14 +319,12 @@ export function OkrTrimestralModal({
 
 export function OkrAnualModal({
   okr,
-  pilares,
   personas,
   coResponsablesActuales,
   triggerLabel,
   triggerClassName,
 }: {
   okr: OkrAnual;
-  pilares: Pilar[];
   personas: UsuarioAutorizado[];
   coResponsablesActuales: string[];
   triggerLabel: string;
@@ -412,7 +339,6 @@ export function OkrAnualModal({
       {(cerrar) => (
         <EditOkrAnualForm
           okr={okr}
-          pilares={pilares}
           personas={personas}
           coResponsablesActuales={coResponsablesActuales}
           onDone={cerrar}
@@ -424,13 +350,11 @@ export function OkrAnualModal({
 
 function EditOkrAnualForm({
   okr,
-  pilares,
   personas,
   coResponsablesActuales,
   onDone,
 }: {
   okr: OkrAnual;
-  pilares: Pilar[];
   personas: UsuarioAutorizado[];
   coResponsablesActuales: string[];
   onDone: () => void;
@@ -446,21 +370,6 @@ function EditOkrAnualForm({
 
   return (
     <form action={formAction} className="space-y-2">
-      <div className="space-y-1">
-        <label className={labelClass}>Pilar</label>
-        <select
-          name="pilar_id"
-          defaultValue={okr.pilar_id ?? ""}
-          className={inputClass}
-        >
-          <option value="">Sin pilar</option>
-          {pilares.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nombre}
-            </option>
-          ))}
-        </select>
-      </div>
       <div className="space-y-1">
         <label className={labelClass}>Título</label>
         <input
@@ -494,13 +403,11 @@ function EditOkrAnualForm({
 
 export function EditOkrTrimestralForm({
   okr,
-  okrsAnuales,
   personas,
   coResponsablesActuales,
   onDone,
 }: {
   okr: OkrTrimestral;
-  okrsAnuales: OkrAnual[];
   personas: UsuarioAutorizado[];
   coResponsablesActuales: string[];
   onDone?: () => void;
@@ -516,21 +423,6 @@ export function EditOkrTrimestralForm({
 
   return (
     <form action={formAction} className="space-y-2">
-      <div className="space-y-1">
-        <label className={labelClass}>OKR anual</label>
-        <select
-          name="okr_anual_id"
-          className={inputClass}
-          defaultValue={okr.okr_anual_id ?? ""}
-        >
-          <option value="">Sin alinear todavía</option>
-          {okrsAnuales.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.titulo}
-            </option>
-          ))}
-        </select>
-      </div>
       <div className="space-y-1">
         <label className={labelClass}>Título</label>
         <input name="titulo" required defaultValue={okr.titulo} className={inputClass} />
@@ -571,6 +463,7 @@ export function EditOkrTrimestralForm({
         defaultColaborativo={okr.es_colaborativo}
         defaultAreas={okr.areas_involucradas ?? []}
       />
+      <p className="text-xs text-tenue">{NOTA_ALINEACION}</p>
       <ErrorText state={state} />
       <button type="submit" disabled={pending} className={submitClass}>
         {pending ? "Guardando…" : "Guardar cambios"}
@@ -580,12 +473,10 @@ export function EditOkrTrimestralForm({
 }
 
 export function NewOkrTrimestralModal({
-  okrsAnuales,
   personas,
   triggerLabel,
   triggerClassName,
 }: {
-  okrsAnuales: OkrAnual[];
   personas: UsuarioAutorizado[];
   triggerLabel: string;
   triggerClassName: string;
@@ -596,23 +487,15 @@ export function NewOkrTrimestralModal({
       triggerLabel={triggerLabel}
       triggerClassName={triggerClassName}
     >
-      {(cerrar) => (
-        <NewOkrTrimestralForm
-          okrsAnuales={okrsAnuales}
-          personas={personas}
-          onDone={cerrar}
-        />
-      )}
+      {(cerrar) => <NewOkrTrimestralForm personas={personas} onDone={cerrar} />}
     </Modal>
   );
 }
 
 export function NewOkrTrimestralForm({
-  okrsAnuales,
   personas,
   onDone,
 }: {
-  okrsAnuales: OkrAnual[];
   personas: UsuarioAutorizado[];
   /** Si viene, cierra el modal cuando el alta sale bien. */
   onDone?: () => void;
@@ -627,19 +510,6 @@ export function NewOkrTrimestralForm({
   );
   return (
     <form action={formAction} className="space-y-2">
-      <div className="space-y-1">
-        <label className={labelClass}>
-          OKR anual (opcional — se puede alinear después)
-        </label>
-        <select name="okr_anual_id" className={inputClass} defaultValue="">
-          <option value="">Sin alinear todavía</option>
-          {okrsAnuales.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.titulo}
-            </option>
-          ))}
-        </select>
-      </div>
       <div className="space-y-1">
         <label className={labelClass}>Título</label>
         <input name="titulo" required className={inputClass} />
@@ -665,6 +535,7 @@ export function NewOkrTrimestralForm({
       </div>
       <SelectorResponsables personas={personas} />
       <AreaObjetivo />
+      <p className="text-xs text-tenue">{NOTA_ALINEACION}</p>
       <ErrorText state={state} />
       <button type="submit" disabled={pending} className={submitClass}>
         {pending ? "Creando…" : "Crear OKR trimestral"}

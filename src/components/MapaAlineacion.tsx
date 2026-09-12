@@ -666,7 +666,6 @@ export function MapaAlineacion({
             triggerClassName="rounded-md border border-linea px-3 py-1.5 text-xs font-medium text-tenue transition hover:border-oxford/50 hover:text-foreground"
           />
           <NewOkrTrimestralModal
-            okrsAnuales={okrsAnuales}
             personas={personas}
             triggerLabel="+ OKR trimestral"
             triggerClassName="rounded-md border border-linea px-3 py-1.5 text-xs font-medium text-tenue transition hover:border-oxford/50 hover:text-foreground"
@@ -858,7 +857,6 @@ export function MapaAlineacion({
                     {puedeEditar && (
                       <OkrAnualModal
                         okr={oa}
-                        pilares={[]}
                         personas={personas}
                         coResponsablesActuales={[]}
                         triggerLabel="✎"
@@ -958,7 +956,6 @@ export function MapaAlineacion({
                   {puedeEditar && (
                     <OkrTrimestralModal
                       okr={ot}
-                      okrsAnuales={okrsAnuales}
                       personas={personas}
                       coResponsablesActuales={[]}
                       triggerLabel="✎"
