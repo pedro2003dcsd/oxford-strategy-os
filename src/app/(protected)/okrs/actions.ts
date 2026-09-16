@@ -592,9 +592,11 @@ export async function createKeyResult(
     return { error: "Completá el OKR trimestral, el título y el tipo de medición." };
   }
 
-  const valorMeta = Number(formData.get("valor_meta"));
-  if (tipoMedicion !== "hitos" && Number.isNaN(valorMeta)) {
-    return { error: "Ingresá una meta numérica." };
+  // Valores en texto libre (formato argentino incluido): "3.060.000.000" se
+  // parsea a 3060000000, "55,22" a 55.22.
+  const valorMeta = parsearNumero(str(formData, "valor_meta"));
+  if (tipoMedicion !== "hitos" && valorMeta === null) {
+    return { error: "Ingresá una meta numérica válida." };
   }
 
   const supabase = await createClient();
@@ -607,8 +609,8 @@ export async function createKeyResult(
       okr_trimestral_id: okrTrimestralId,
       titulo,
       tipo_medicion: tipoMedicion,
-      valor_inicial: Number(formData.get("valor_inicial")) || 0,
-      valor_meta: tipoMedicion === "hitos" ? 1 : valorMeta,
+      valor_inicial: parsearNumero(str(formData, "valor_inicial")) ?? 0,
+      valor_meta: tipoMedicion === "hitos" ? 1 : (valorMeta as number),
       cliente_id: clienteId,
       cliente_asociado: clienteNombre,
       margen_utilidad_esperado:
@@ -651,9 +653,11 @@ export async function updateKeyResult(
     return { error: "Completá el título y el tipo de medición." };
   }
 
-  const valorMeta = Number(formData.get("valor_meta"));
-  if (tipoMedicion !== "hitos" && Number.isNaN(valorMeta)) {
-    return { error: "Ingresá una meta numérica." };
+  // Valores en texto libre (formato argentino incluido): "3.060.000.000" se
+  // parsea a 3060000000, "55,22" a 55.22.
+  const valorMeta = parsearNumero(str(formData, "valor_meta"));
+  if (tipoMedicion !== "hitos" && valorMeta === null) {
+    return { error: "Ingresá una meta numérica válida." };
   }
 
   const supabase = await createClient();
@@ -672,8 +676,8 @@ export async function updateKeyResult(
   const campos = {
     titulo,
     tipo_medicion: tipoMedicion,
-    valor_inicial: Number(formData.get("valor_inicial")) || 0,
-    valor_meta: tipoMedicion === "hitos" ? 1 : valorMeta,
+    valor_inicial: parsearNumero(str(formData, "valor_inicial")) ?? 0,
+    valor_meta: tipoMedicion === "hitos" ? 1 : (valorMeta as number),
     cliente_id: clienteId,
     cliente_asociado: clienteNombre,
     margen_utilidad_esperado:

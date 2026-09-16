@@ -9,6 +9,7 @@ import {
   type FormActionState,
 } from "@/app/(protected)/okrs/actions";
 import { TIPOS_MEDICION } from "@/lib/types";
+import { formatearParaInput } from "@/lib/numeros";
 import type {
   Cliente,
   HitoKr,
@@ -62,6 +63,7 @@ export function KrModal({
   const isEdit = !!kr;
   const [open, setOpen] = useState(false);
   const [tipo, setTipo] = useState<TipoMedicion>(kr?.tipo_medicion ?? "porcentaje");
+  const tipoInicial = kr?.tipo_medicion ?? "porcentaje";
   const [clienteId, setClienteId] = useState(kr?.cliente_id ?? "");
   const [hitoRows, setHitoRows] = useState<HitoRow[]>([]);
   const [nextKey, setNextKey] = useState(0);
@@ -192,9 +194,9 @@ export function KrModal({
                     <label className={labelClass}>Valor inicial</label>
                     <input
                       name="valor_inicial"
-                      type="number"
-                      step="any"
-                      defaultValue={kr?.valor_inicial ?? 0}
+                      type="text"
+                      inputMode="decimal"
+                      defaultValue={formatearParaInput(kr?.valor_inicial ?? 0, tipoInicial)}
                       className={inputClass}
                     />
                   </div>
@@ -202,10 +204,10 @@ export function KrModal({
                     <label className={labelClass}>Meta</label>
                     <input
                       name="valor_meta"
-                      type="number"
-                      step="any"
+                      type="text"
+                      inputMode="decimal"
                       required
-                      defaultValue={kr?.valor_meta ?? ""}
+                      defaultValue={kr ? formatearParaInput(kr.valor_meta, tipoInicial) : ""}
                       className={inputClass}
                     />
                   </div>
