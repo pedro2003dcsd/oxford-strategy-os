@@ -487,6 +487,26 @@ export async function deleteKrAnual(krAnualId: string): Promise<FormActionState>
   return undefined;
 }
 
+/** Borrar un OKR anual. Solo Dirección (vetoDeBorrado), igual que el resto de
+ * los borrados estratégicos.
+ *
+ * En cascada por FK se llevan: sus KR anuales (y, dentro de esos, sus
+ * kr_alineacion), sus okr_alineacion (vínculos con OKR trimestrales) y sus
+ * okr_responsables. La columna legacy okr_trimestral.okr_anual_id queda en
+ * NULL (SET NULL). Los OKR/KR trimestrales NO se borran; sí desaparecen las
+ * alineaciones, así que no quedan líneas huérfanas. */
+export async function deleteOkrAnual(okrAnualId: string): Promise<FormActionState> {
+  const veto = await vetoDeBorrado();
+  if (veto) return { error: veto };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("okr_anual").delete().eq("id", okrAnualId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/okrs");
+  return undefined;
+}
+
 // ------------------------------------------------------------
 // Alineación muchos-a-muchos (el mapa)
 //

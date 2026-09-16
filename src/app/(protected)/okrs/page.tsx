@@ -17,6 +17,7 @@ export default async function OkrsPage() {
   const supabase = await createClient();
   const perfil = await perfilActual();
   const puedeEditar = perfil ? perfil.rol !== "lectura" : false;
+  const esDireccion = perfil?.esDireccion ?? false;
 
   const [
     { data: okrsAnuales },
@@ -69,6 +70,7 @@ export default async function OkrsPage() {
         personas={(personas ?? []) as UsuarioAutorizado[]}
         clientes={(clientes ?? []) as Cliente[]}
         puedeEditar={puedeEditar}
+        esDireccion={esDireccion}
       />
     </div>
   );

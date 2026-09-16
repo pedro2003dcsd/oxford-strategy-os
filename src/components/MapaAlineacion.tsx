@@ -21,6 +21,7 @@ import {
 import { progresoPct } from "@/lib/kr-logic";
 import { KrModal } from "@/components/KrModal";
 import { KrAnualModal } from "@/components/KrAnualModal";
+import { BorrarAnual } from "@/components/BorrarAnual";
 import {
   NewOkrAnualModal,
   NewOkrTrimestralModal,
@@ -71,6 +72,7 @@ export function MapaAlineacion({
   personas,
   clientes,
   puedeEditar,
+  esDireccion = false,
 }: {
   okrsAnuales: OkrAnual[];
   krsAnuales: KrAnual[];
@@ -81,6 +83,9 @@ export function MapaAlineacion({
   personas: UsuarioAutorizado[];
   clientes: Cliente[];
   puedeEditar: boolean;
+  /** Borrar OKR/KR anual queda reservado a Dirección, igual que el resto de
+   * los borrados estratégicos. El botón ni aparece para los demás. */
+  esDireccion?: boolean;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<HTMLDivElement>(null);
@@ -181,6 +186,20 @@ export function MapaAlineacion({
     }),
     [okrLinks, krLinks]
   );
+
+  /** Qué se lleva por delante borrar un OKR anual, para la confirmación. */
+  function advertenciaOkrAnual(okrAnualId: string): string {
+    const krs = krsAnualesPorOkr.get(okrAnualId) ?? [];
+    const tieneAlin =
+      alineados.okrA.has(okrAnualId) || krs.some((k) => alineados.krA.has(k.id));
+    const partes: string[] = [];
+    if (krs.length > 0)
+      partes.push(`sus ${krs.length} KR anual${krs.length > 1 ? "es" : ""}`);
+    if (tieneAlin) partes.push("sus alineaciones");
+    return partes.length
+      ? `Se borran también ${partes.join(" y ")}.`
+      : "No tiene KR anuales ni alineaciones.";
+  }
 
   // clientX/Y → coordenadas del mundo (sin la escala). worldRect ya incluye
   // el pan, así que sólo hace falta dividir por la escala.
@@ -864,13 +883,22 @@ export function MapaAlineacion({
                       <p className="truncate text-xs text-tenue">{oa.responsable}</p>
                     )}
                   </div>
-                  <div className="flex shrink-0 items-center gap-1">
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
                     {puedeEditar && (
                       <OkrAnualModal
                         okr={oa}
                         personas={personas}
                         coResponsablesActuales={[]}
                         triggerLabel="✎"
+                        triggerClassName={btnMini}
+                      />
+                    )}
+                    {esDireccion && (
+                      <BorrarAnual
+                        tipo="okrAnual"
+                        id={oa.id}
+                        titulo={oa.titulo}
+                        advertencia={advertenciaOkrAnual(oa.id)}
                         triggerClassName={btnMini}
                       />
                     )}
@@ -906,6 +934,17 @@ export function MapaAlineacion({
                             okrAnualId={oa.id}
                             kr={kr}
                             triggerLabel="✎"
+                            triggerClassName={btnMini}
+                          />
+                        )}
+                        {esDireccion && (
+                          <BorrarAnual
+                            tipo="krAnual"
+                            id={kr.id}
+                            titulo={kr.titulo}
+                            advertencia={
+                              alineados.krA.has(kr.id) ? "Se quitan sus alineaciones." : ""
+                            }
                             triggerClassName={btnMini}
                           />
                         )}
