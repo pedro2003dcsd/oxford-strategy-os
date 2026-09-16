@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export const inputClass =
   "w-full rounded-md border border-linea bg-panel px-2 py-1.5 text-sm";
@@ -43,6 +44,42 @@ export function Modal({
     if (open) contenedor.current?.focus();
   }, [open]);
 
+  // El overlay se renderiza con un Portal sobre document.body, FUERA del árbol
+  // del mapa: el `world` del mapa tiene un `transform`, y un ancestro
+  // transformado vuelve el containing block de los `position: fixed`
+  // descendientes, con lo que el modal quedaba referido al mundo desplazado en
+  // vez del viewport. Con el portal, `fixed inset-0` siempre es la ventana.
+  const overlay = (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setOpen(false);
+      }}
+    >
+      <div
+        ref={contenedor}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={titulo}
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-linea bg-panel p-6 shadow-xl outline-none"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold">{titulo}</h2>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="rounded-md p-1 text-tenue hover:text-foreground"
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
+        </div>
+        {children(() => setOpen(false))}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <button
@@ -53,36 +90,9 @@ export function Modal({
         {triggerLabel}
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
-          }}
-        >
-          <div
-            ref={contenedor}
-            tabIndex={-1}
-            role="dialog"
-            aria-modal="true"
-            aria-label={titulo}
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-linea bg-panel p-6 shadow-xl outline-none"
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold">{titulo}</h2>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-md p-1 text-tenue hover:text-foreground"
-                aria-label="Cerrar"
-              >
-                ✕
-              </button>
-            </div>
-            {children(() => setOpen(false))}
-          </div>
-        </div>
-      )}
+      {/* `open` es false en SSR y en el render inicial del cliente, así que
+          createPortal no toca document en el servidor ni rompe la hidratación. */}
+      {open && createPortal(overlay, document.body)}
     </>
   );
 }

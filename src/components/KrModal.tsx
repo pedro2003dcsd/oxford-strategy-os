@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useActionState } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
 import {
   createKeyResult,
@@ -95,7 +96,10 @@ export function KrModal({
       <button type="button" onClick={openModal} className={triggerClassName}>
         {triggerLabel}
       </button>
-      {open && (
+      {/* Portal a document.body: el `world` del mapa está transformado y sería
+          el containing block de un `position: fixed` descendiente. Con el
+          portal el overlay es siempre relativo al viewport. */}
+      {open && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onClick={(e) => {
@@ -330,7 +334,8 @@ export function KrModal({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
