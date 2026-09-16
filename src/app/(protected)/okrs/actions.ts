@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { puedeEscribir, vetoDeBorrado, vetoDeEscritura } from "@/lib/permisos";
 import { registrarCambios } from "@/lib/historial-server";
+import { parsearNumero } from "@/lib/numeros";
 import type { Area } from "@/lib/types";
 
 export type FormActionState = { error?: string } | undefined;
@@ -409,8 +410,10 @@ export async function createKrAnual(
     return { error: "Completá el título y el tipo de medición." };
   }
 
-  const valorMeta = Number(formData.get("valor_meta"));
-  if (Number.isNaN(valorMeta)) return { error: "Ingresá una meta numérica." };
+  // Los valores llegan como texto libre (formato argentino incluido) y se
+  // parsean acá: "3.060.000.000" → 3060000000, "55,22" → 55.22.
+  const valorMeta = parsearNumero(str(formData, "valor_meta"));
+  if (valorMeta === null) return { error: "Ingresá una meta numérica válida." };
 
   const supabase = await createClient();
 
@@ -427,7 +430,7 @@ export async function createKrAnual(
     okr_anual_id: okrAnualId,
     titulo,
     tipo_medicion: tipoMedicion,
-    valor_inicial: Number(formData.get("valor_inicial")) || 0,
+    valor_inicial: parsearNumero(str(formData, "valor_inicial")) ?? 0,
     valor_meta: valorMeta,
     orden: ((ultimo?.orden as number | undefined) ?? 0) + 1,
   });
@@ -451,8 +454,8 @@ export async function updateKrAnual(
     return { error: "Completá el título y el tipo de medición." };
   }
 
-  const valorMeta = Number(formData.get("valor_meta"));
-  if (Number.isNaN(valorMeta)) return { error: "Ingresá una meta numérica." };
+  const valorMeta = parsearNumero(str(formData, "valor_meta"));
+  if (valorMeta === null) return { error: "Ingresá una meta numérica válida." };
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -460,7 +463,7 @@ export async function updateKrAnual(
     .update({
       titulo,
       tipo_medicion: tipoMedicion,
-      valor_inicial: Number(formData.get("valor_inicial")) || 0,
+      valor_inicial: parsearNumero(str(formData, "valor_inicial")) ?? 0,
       valor_meta: valorMeta,
       updated_at: new Date().toISOString(),
     })

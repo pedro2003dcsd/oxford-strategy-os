@@ -8,6 +8,7 @@ import {
   type FormActionState,
 } from "@/app/(protected)/okrs/actions";
 import { Modal, inputClass, labelClass, submitClass, ErrorText } from "@/components/Modal";
+import { formatearParaInput } from "@/lib/numeros";
 import type { KrAnual, TipoMedicion } from "@/lib/types";
 
 /** El KR anual es una meta, no un número que se sigue día a día: por eso no
@@ -32,6 +33,7 @@ function KrAnualForm({
 }) {
   const isEdit = !!kr;
   const [tipo, setTipo] = useState<TipoMedicion>(kr?.tipo_medicion ?? "porcentaje");
+  const tipoInicial = kr?.tipo_medicion ?? "porcentaje";
   const accion = isEdit
     ? updateKrAnual.bind(null, kr.id)
     : createKrAnual.bind(null, okrAnualId);
@@ -84,9 +86,9 @@ function KrAnualForm({
           <label className={labelClass}>Valor inicial</label>
           <input
             name="valor_inicial"
-            type="number"
-            step="any"
-            defaultValue={kr?.valor_inicial ?? 0}
+            type="text"
+            inputMode="decimal"
+            defaultValue={formatearParaInput(kr?.valor_inicial ?? 0, tipoInicial)}
             className={inputClass}
           />
         </div>
@@ -94,10 +96,11 @@ function KrAnualForm({
           <label className={labelClass}>Meta del año</label>
           <input
             name="valor_meta"
-            type="number"
-            step="any"
+            type="text"
+            inputMode="decimal"
             required
-            defaultValue={kr?.valor_meta ?? ""}
+            defaultValue={kr ? formatearParaInput(kr.valor_meta, tipoInicial) : ""}
+            placeholder="Ej: 3.060.000.000 · 55,22 · 20"
             className={inputClass}
           />
         </div>

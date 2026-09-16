@@ -266,12 +266,12 @@ export function MapaAlineacion({
         movido = true;
       if (movido && dragCard!.movible) {
         const p = puntoMundo(e);
+        // Sin tope en 0: el cuadro se mueve libre en cualquier dirección, como
+        // un mapa conceptual amplio. Antes quedaba atrapado contra el borde
+        // superior-izquierdo. "Ajustar" siempre reencuadra todo.
         setMovidos((m) => ({
           ...m,
-          [dragCard!.key]: {
-            x: Math.max(0, p.x - dragCard!.offX),
-            y: Math.max(0, p.y - dragCard!.offY),
-          },
+          [dragCard!.key]: { x: p.x - dragCard!.offX, y: p.y - dragCard!.offY },
         }));
       }
     }
@@ -749,8 +749,14 @@ export function MapaAlineacion({
             backgroundSize: "22px 22px",
           }}
         >
-          {/* Conectores (no capturan puntero) */}
-          <svg className="pointer-events-none absolute inset-0" width={tamano.w} height={tamano.h}>
+          {/* Conectores (no capturan puntero). overflow visible: las líneas
+              hacia cuadros movidos a coordenadas negativas siguen dibujándose. */}
+          <svg
+            className="pointer-events-none absolute inset-0"
+            width={tamano.w}
+            height={tamano.h}
+            style={{ overflow: "visible" }}
+          >
             {lineas.map((l) => {
               const enfocada = foco?.lineKeys.has(l.key) ?? false;
               // Sin selección las conexiones quedan tenues para no ensuciar el
@@ -786,7 +792,12 @@ export function MapaAlineacion({
           {/* Capa de hover de líneas: trazo transparente ancho sólo para
               detectar el mouse sobre la línea y revelar la ✕. */}
           {puedeEditar && (
-            <svg className="pointer-events-none absolute inset-0" width={tamano.w} height={tamano.h}>
+            <svg
+              className="pointer-events-none absolute inset-0"
+              width={tamano.w}
+              height={tamano.h}
+              style={{ overflow: "visible" }}
+            >
               {lineas.map((l) => (
                 <path
                   key={l.key}
