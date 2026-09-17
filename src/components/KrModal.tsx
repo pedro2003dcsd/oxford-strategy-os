@@ -102,7 +102,15 @@ export function KrModal({
       {open && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          // Aunque el portal vive en document.body, los eventos de React
+          // propagan por el árbol: este overlay es hijo de una fila de KR
+          // (onClick → seleccionarKr) dentro de una tarjeta del mapa
+          // (onPointerDown → drag/pan). Cortamos pointerdown y click acá para
+          // que la interacción del modal no toque el mapa; el backdrop sigue
+          // cerrando porque se resuelve en este mismo nodo.
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
+            e.stopPropagation();
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >

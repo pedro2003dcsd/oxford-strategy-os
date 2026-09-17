@@ -52,7 +52,16 @@ export function Modal({
   const overlay = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      // El portal vive en document.body, pero los eventos de React siguen
+      // propagando por el ÁRBOL de React: este overlay es hijo de una tarjeta
+      // del mapa cuyo `onPointerDown` arma drag/pan y cuyo `onClick` selecciona.
+      // Cortamos acá pointerdown y click para que ninguna interacción del modal
+      // llegue al mapa. stopPropagation solo frena el burbujeo hacia los
+      // ancestros: los inputs/selects/textarea del modal siguen recibiendo su
+      // propio evento, y el cierre por backdrop se resuelve en este mismo nodo.
+      onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => {
+        e.stopPropagation();
         if (e.target === e.currentTarget) setOpen(false);
       }}
     >
