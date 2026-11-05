@@ -1039,6 +1039,16 @@ export function MapaAlineacion({
                         <span className="min-w-0 flex-1 line-clamp-2 leading-snug">{kr.titulo}</span>
                         <SemaforoBadge estado={kr.estado_semaforo} compact />
                         <span className="shrink-0 text-xs text-tenue">{progresoPct(kr)}%</span>
+                        {puedeEditar && (
+                          <KrModal
+                            okrFijo={ot}
+                            clientes={clientes}
+                            kr={kr}
+                            hitos={kr.hitos_kr ?? []}
+                            triggerLabel="✎"
+                            triggerClassName={btnMini}
+                          />
+                        )}
                       </div>
                     ))
                   )}
