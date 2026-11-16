@@ -5,15 +5,28 @@ import { ResponsablesPanel } from "@/components/ResponsablesPanel";
 import { LeyendaEdicion } from "@/components/HistorialEdicion";
 import { ultimasEdiciones } from "@/lib/historial-server";
 import { progresoPct, numerarKrsPorObjetivo } from "@/lib/kr-logic";
+import { TRIMESTRES } from "@/lib/types";
 import type {
   HitoKr,
   KeyResult,
   OkrColaborativo,
+  Trimestre,
   UsuarioAutorizado,
 } from "@/lib/types";
 
-export default async function ColaborativosPage() {
+export default async function ColaborativosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ trimestre?: string | string[] }>;
+}) {
   const supabase = await createClient();
+  // Filtro por trimestre desde la URL: es un Server Component, así que el
+  // selector son links a ?trimestre=Q4 y no estado de cliente. Solo acota lo
+  // que se ve: no escribe nada. Un valor que no sea Q1..Q4 equivale a "Todos".
+  const { trimestre: qFiltro } = await searchParams;
+  const qActivo: Trimestre | null = TRIMESTRES.includes(qFiltro as Trimestre)
+    ? (qFiltro as Trimestre)
+    : null;
 
   const [{ data: okrs }, { data: keyResults }, { data: personas }] =
     await Promise.all([
@@ -41,9 +54,13 @@ export default async function ColaborativosPage() {
     krsPorOkr.get(kr.okr_trimestral_id)!.push(kr);
   }
 
+  const okrsVisibles = qActivo
+    ? okrsList.filter((o) => o.trimestre === qActivo)
+    : okrsList;
+
   const ediciones = await ultimasEdiciones(
     "okr_id",
-    okrsList.map((o) => o.id)
+    okrsVisibles.map((o) => o.id)
   );
 
   /** Avance del objetivo: promedio simple de sus KRs. Ponderarlos exigiría
@@ -79,8 +96,48 @@ export default async function ColaborativosPage() {
           </p>
         </div>
       ) : (
+        <>
+        <nav aria-label="Filtrar por trimestre" className="flex flex-wrap gap-1">
+          {(["Todos", ...TRIMESTRES] as const).map((t) => {
+            const activo = t === "Todos" ? !qActivo : qActivo === t;
+            const href =
+              t === "Todos"
+                ? "/okrs/colaborativos"
+                : "/okrs/colaborativos?trimestre=" + t;
+            return (
+              <Link
+                key={t}
+                href={href}
+                aria-current={activo ? "page" : undefined}
+                className={
+                  activo
+                    ? "rounded-md bg-oxford px-2.5 py-1 text-xs font-medium text-white"
+                    : "rounded-md bg-linea/60 px-2.5 py-1 text-xs font-medium text-tenue transition hover:text-foreground"
+                }
+              >
+                {t}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {okrsVisibles.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-linea p-6 text-center">
+            <p className="text-sm font-medium">
+              No hay objetivos colaborativos en {qActivo}.
+            </p>
+            <p className="mt-1 text-sm text-tenue">
+              <Link
+                href="/okrs/colaborativos"
+                className="text-oxford hover:underline"
+              >
+                Ver todos los trimestres
+              </Link>
+            </p>
+          </div>
+        ) : (
         <div className="space-y-4">
-          {okrsList.map((okr) => {
+          {okrsVisibles.map((okr) => {
             const krs = krsPorOkr.get(okr.id) ?? [];
             const pct = avance(okr.id);
 
@@ -157,6 +214,8 @@ export default async function ColaborativosPage() {
             );
           })}
         </div>
+        )}
+        </>
       )}
     </div>
   );
