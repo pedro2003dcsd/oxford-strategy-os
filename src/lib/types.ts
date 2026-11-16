@@ -234,10 +234,20 @@ export interface ActaDirectorio {
 export interface CheckIn {
   id: string;
   kr_id: string;
+  /** A nombre de quién se cargó (texto libre). Lo leen la LOM, los informes
+   * y Scout. No dice quién lo cargó: para eso está `autor_id`. */
   usuario: string;
+  /** Quién lo cargó, estampado por la base desde la sesión (0019). Nulo en
+   * los check-ins anteriores a esa migración: esos no los corrige nadie. */
+  autor_id: string | null;
   valor_registrado: number;
   estado_semaforo: Semaforo;
   comentario_bloqueos: string | null;
+  /** Avance y semáforo que tenía el KR justo antes de esta carga. Es lo que
+   * se restaura al borrar el único check-in de un KR. */
+  valor_previo: number | null;
+  semaforo_previo: Semaforo | null;
+  editado_at: string | null;
   creado_at: string;
 }
 
