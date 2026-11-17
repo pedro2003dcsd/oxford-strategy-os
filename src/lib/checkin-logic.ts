@@ -20,6 +20,46 @@ function esPosterior(a: CheckIn, b: CheckIn): boolean {
   return a.id > b.id;
 }
 
+export const MENSAJE_VALOR_INVALIDO = "Ingresá un valor numérico válido.";
+export const MENSAJE_SEMAFORO_INVALIDO = "Elegí un semáforo.";
+export const MENSAJE_FALTA_EXPLICACION =
+  "En amarillo o rojo, contá qué bloqueos o necesidades hay antes de guardar.";
+
+/** El avance tal como llega de un formulario, convertido a número finito.
+ * Null si está vacío o no es un número de verdad: Number() acepta
+ * "Infinity" y "1e999", y eso terminaría como avance del KR. */
+export function avanceValido(raw: unknown): number | null {
+  if (typeof raw !== "string" || raw.trim() === "") return null;
+  const valor = Number(raw);
+  return Number.isFinite(valor) ? valor : null;
+}
+
+/** Por qué no se puede guardar la corrección de un check-in, o null si está
+ * bien. Lo usan el formulario, para avisar antes de enviar, y la acción del
+ * servidor. La base vuelve a validar lo mismo en editar_check_in (0019).
+ *
+ * `comentario` es el texto con el que quedaría el check-in. Null significa
+ * "no se envió": se conserva el que ya tenía, y si hace falta una explicación
+ * lo decide la base, que es la que lo conoce. */
+export function motivoCorreccionInvalida(c: {
+  valor: unknown;
+  estado: string;
+  comentario: string | null;
+}): string | null {
+  if (avanceValido(c.valor) === null) return MENSAJE_VALOR_INVALIDO;
+  if (!["verde", "amarillo", "rojo"].includes(c.estado)) {
+    return MENSAJE_SEMAFORO_INVALIDO;
+  }
+  if (
+    (c.estado === "amarillo" || c.estado === "rojo") &&
+    c.comentario !== null &&
+    c.comentario.trim() === ""
+  ) {
+    return MENSAJE_FALTA_EXPLICACION;
+  }
+  return null;
+}
+
 /** El check-in que esta persona puede editar o borrar, o null.
  *
  * Solo el más reciente del KR, solo quien lo cargó y solo si todavía puede

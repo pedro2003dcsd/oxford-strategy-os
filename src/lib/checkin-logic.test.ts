@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { checkInCorregible, ultimoCheckIn } from "@/lib/checkin-logic";
+import {
+  MENSAJE_FALTA_EXPLICACION,
+  MENSAJE_SEMAFORO_INVALIDO,
+  MENSAJE_VALOR_INVALIDO,
+  avanceValido,
+  checkInCorregible,
+  motivoCorreccionInvalida,
+  ultimoCheckIn,
+} from "@/lib/checkin-logic";
 import type { CheckIn } from "@/lib/types";
 
 function checkIn(c: Partial<CheckIn>): CheckIn {
@@ -96,6 +104,72 @@ describe("checkInCorregible", () => {
   it("los KR de hitos quedan afuera", () => {
     expect(
       checkInCorregible({ tipo_medicion: "hitos" }, [ultimoDeAna], ana)
+    ).toBeNull();
+  });
+});
+
+describe("avanceValido", () => {
+  it("acepta enteros, decimales, negativos y cero", () => {
+    expect(avanceValido("42")).toBe(42);
+    expect(avanceValido("55.5")).toBe(55.5);
+    expect(avanceValido("-3")).toBe(-3);
+    expect(avanceValido("0")).toBe(0);
+  });
+
+  it("rechaza lo vacío y lo que no es texto", () => {
+    expect(avanceValido("")).toBeNull();
+    expect(avanceValido("   ")).toBeNull();
+    expect(avanceValido(null)).toBeNull();
+    expect(avanceValido(undefined)).toBeNull();
+  });
+
+  it("rechaza lo que no es un número finito", () => {
+    expect(avanceValido("abc")).toBeNull();
+    expect(avanceValido("NaN")).toBeNull();
+    expect(avanceValido("Infinity")).toBeNull();
+    expect(avanceValido("-Infinity")).toBeNull();
+    expect(avanceValido("1e999")).toBeNull();
+  });
+});
+
+describe("motivoCorreccionInvalida", () => {
+  it("una corrección en verde no necesita comentario", () => {
+    expect(
+      motivoCorreccionInvalida({ valor: "40", estado: "verde", comentario: "" })
+    ).toBeNull();
+  });
+
+  it("pide un valor numérico finito", () => {
+    for (const valor of ["", "abc", "Infinity", "1e999"]) {
+      expect(
+        motivoCorreccionInvalida({ valor, estado: "verde", comentario: "" })
+      ).toBe(MENSAJE_VALOR_INVALIDO);
+    }
+  });
+
+  it("pide un semáforo conocido", () => {
+    expect(
+      motivoCorreccionInvalida({ valor: "40", estado: "violeta", comentario: "" })
+    ).toBe(MENSAJE_SEMAFORO_INVALIDO);
+  });
+
+  it("en amarillo o rojo exige una explicación", () => {
+    for (const estado of ["amarillo", "rojo"]) {
+      expect(
+        motivoCorreccionInvalida({ valor: "40", estado, comentario: "" })
+      ).toBe(MENSAJE_FALTA_EXPLICACION);
+      expect(
+        motivoCorreccionInvalida({ valor: "40", estado, comentario: "   " })
+      ).toBe(MENSAJE_FALTA_EXPLICACION);
+      expect(
+        motivoCorreccionInvalida({ valor: "40", estado, comentario: "Falta arte" })
+      ).toBeNull();
+    }
+  });
+
+  it("si el comentario no se envió, lo decide la base con el que ya existe", () => {
+    expect(
+      motivoCorreccionInvalida({ valor: "40", estado: "rojo", comentario: null })
     ).toBeNull();
   });
 });

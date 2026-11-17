@@ -52,7 +52,9 @@ export async function submitCheckInExpress(
   } else {
     const valorRaw = formData.get("valor_registrado");
     valor = Number(valorRaw);
-    if (valorRaw === null || valorRaw === "" || Number.isNaN(valor)) {
+    // isFinite y no isNaN: Number("Infinity") y Number("1e999") no son NaN,
+    // y un infinito terminaría como avance del KR.
+    if (valorRaw === null || valorRaw === "" || !Number.isFinite(valor)) {
       return { error: "Ingresá un valor numérico válido." };
     }
   }

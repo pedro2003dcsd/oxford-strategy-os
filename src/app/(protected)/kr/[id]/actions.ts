@@ -3,8 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { puedeEscribir, vetoDeEscritura } from "@/lib/permisos";
+import {
+  MENSAJE_FALTA_EXPLICACION,
+  MENSAJE_SEMAFORO_INVALIDO,
+  MENSAJE_VALOR_INVALIDO,
+  avanceValido,
+  motivoCorreccionInvalida,
+} from "@/lib/checkin-logic";
 
-export type CheckInState = { error?: string } | undefined;
+/** `actualizar` avisa que lo que se ve en pantalla quedó viejo (alguien
+ * cargó o borró un check-in mientras tanto) y conviene refrescar. */
+export type CheckInState = { error?: string; actualizar?: boolean } | undefined;
 
 export async function addCheckIn(
   krId: string,
@@ -19,12 +28,10 @@ export async function addCheckIn(
   const estado = String(formData.get("estado_semaforo") ?? "");
   const comentario = String(formData.get("comentario_bloqueos") ?? "").trim();
 
-  const valor = Number(valorRaw);
+  const valor = avanceValido(valorRaw);
 
   if (!usuario) return { error: "Indicá quién hace el check-in." };
-  if (valorRaw === null || valorRaw === "" || Number.isNaN(valor)) {
-    return { error: "Ingresá un valor numérico válido." };
-  }
+  if (valor === null) return { error: MENSAJE_VALOR_INVALIDO };
   if (!["verde", "amarillo", "rojo"].includes(estado)) {
     return { error: "Elegí un semáforo." };
   }
@@ -38,7 +45,7 @@ export async function addCheckIn(
     comentario_bloqueos: comentario || null,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: motivoDeRechazo(error.message) };
 
   revalidatePath(`/kr/${krId}`);
   revalidatePath("/");
@@ -59,13 +66,28 @@ const MOTIVOS_DE_RECHAZO: Record<string, string> = {
     "Los check-ins de un KR de hitos no se pueden editar ni borrar.",
   checkin_sin_estado_previo:
     "No se puede borrar: no quedó guardado el avance que tenía el KR antes de este check-in. Podés editarlo en lugar de borrarlo.",
-  checkin_valor_invalido: "Ingresá un valor numérico válido.",
-  checkin_semaforo_invalido: "Elegí un semáforo.",
+  checkin_valor_invalido: MENSAJE_VALOR_INVALIDO,
+  checkin_semaforo_invalido: MENSAJE_SEMAFORO_INVALIDO,
+  checkin_falta_explicacion: MENSAJE_FALTA_EXPLICACION,
 };
 
 function motivoDeRechazo(mensaje: string): string {
   const codigo = Object.keys(MOTIVOS_DE_RECHAZO).find((c) => mensaje.includes(c));
   return codigo ? MOTIVOS_DE_RECHAZO[codigo] : mensaje;
+}
+
+/** Los rechazos que significan "lo que ves ya no es el estado actual". */
+const RECHAZOS_POR_HISTORIAL_VIEJO = [
+  "checkin_no_existe",
+  "checkin_no_es_ultimo",
+  "checkin_no_es_autor",
+];
+
+function rechazo(mensaje: string): { error: string; actualizar: boolean } {
+  return {
+    error: motivoDeRechazo(mensaje),
+    actualizar: RECHAZOS_POR_HISTORIAL_VIEJO.some((c) => mensaje.includes(c)),
+  };
 }
 
 /** Todo lo que muestra el avance o el último check-in de un KR. */
@@ -90,28 +112,27 @@ export async function editarCheckIn(
 
   const valorRaw = formData.get("valor_registrado");
   const estado = String(formData.get("estado_semaforo") ?? "");
-  const comentario = String(formData.get("comentario_bloqueos") ?? "").trim();
-  const valor = Number(valorRaw);
+  // El comentario viaja tal cual quedó en el formulario, que arranca con el
+  // que ya tenía el check-in. Si el campo no viene, va null y la base
+  // conserva el existente: editar nunca borra un comentario por omisión.
+  const comentarioRaw = formData.get("comentario_bloqueos");
+  const comentario = comentarioRaw === null ? null : String(comentarioRaw).trim();
 
-  if (valorRaw === null || valorRaw === "" || Number.isNaN(valor)) {
-    return { error: MOTIVOS_DE_RECHAZO.checkin_valor_invalido };
-  }
-  if (!["verde", "amarillo", "rojo"].includes(estado)) {
-    return { error: MOTIVOS_DE_RECHAZO.checkin_semaforo_invalido };
-  }
+  const motivo = motivoCorreccionInvalida({ valor: valorRaw, estado, comentario });
+  if (motivo) return { error: motivo };
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("editar_check_in", {
     p_check_in: checkInId,
-    p_valor: valor,
+    p_valor: avanceValido(valorRaw),
     p_estado: estado,
-    p_comentario: comentario || null,
+    p_comentario: comentario,
   });
 
   // Si falla no se revalida: el rechazo típico es que alguien cargó un
   // check-in más nuevo, y refrescar acá sacaría de pantalla el formulario
   // junto con el mensaje que lo explica. El formulario ofrece actualizar.
-  if (error) return { error: motivoDeRechazo(error.message) };
+  if (error) return rechazo(error.message);
   revalidarKr(krId);
   return undefined;
 }
@@ -131,7 +152,7 @@ export async function borrarCheckIn(
     p_check_in: checkInId,
   });
 
-  if (error) return { error: motivoDeRechazo(error.message) };
+  if (error) return rechazo(error.message);
   revalidarKr(krId);
   return undefined;
 }

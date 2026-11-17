@@ -35,6 +35,12 @@
 --     check-in: se retiran las políticas y los permisos directos.
 --   - Los KR de hitos quedan afuera: el check-in tilda los hitos en la lista
 --     y eso no se deshace.
+--   - Al editar, el comentario que ya tenía el check-in se conserva salvo que
+--     se mande otro. Y si el semáforo queda en amarillo o rojo tiene que
+--     haber una explicación: sin ella la edición se rechaza.
+--   - El avance tiene que ser un número finito, al cargar y al editar.
+--     `numeric` acepta NaN e Infinity, y uno de esos en un check-in pasaría
+--     derecho al avance del KR.
 --
 -- No toca datos existentes. Es compatible con el código desplegado: las
 -- columnas nuevas son opcionales y la app actual no modifica ni borra
@@ -71,10 +77,26 @@ $$;
 grant execute on function usuario_actual_id() to authenticated;
 
 -- ------------------------------------------------------------
+-- Un avance sirve si es un número de verdad: ni nulo, ni NaN, ni infinito.
+--
+-- Se compara como texto para no depender de la versión de Postgres: el
+-- literal 'Infinity'::numeric recién existe desde la 14.
+-- ------------------------------------------------------------
+create or replace function avance_finito(p_valor numeric)
+returns boolean
+language sql
+immutable
+as $$
+  select p_valor is not null
+    and p_valor::text not in ('NaN', 'Infinity', '-Infinity');
+$$;
+
+-- ------------------------------------------------------------
 -- Antes de insertar un check-in.
 --
--- Toma el bloqueo del KR: es el mismo que toman editar_check_in y
--- borrar_check_in, y es lo que coordina la carga con la corrección.
+-- Rechaza un avance que no sea un número finito. Después toma el bloqueo
+-- del KR: es el mismo que toman editar_check_in y borrar_check_in, y es lo
+-- que coordina la carga con la corrección.
 --
 -- Con el bloqueo tomado:
 --   - guarda el estado que tiene el KR en este momento (el "previo");
@@ -95,6 +117,10 @@ declare
   v_valor numeric;
   v_semaforo varchar;
 begin
+  if not avance_finito(new.valor_registrado) then
+    raise exception 'checkin_valor_invalido';
+  end if;
+
   select valor_actual, estado_semaforo
     into v_valor, v_semaforo
   from key_results
@@ -182,6 +208,14 @@ revoke execute on function check_in_corregible(uuid) from public, anon, authenti
 
 -- ------------------------------------------------------------
 -- Editar el último check-in. El KR toma los valores corregidos.
+--
+-- El comentario: si p_comentario viene nulo se conserva el que ya tenía el
+-- check-in; si viene un texto, lo reemplaza (un texto vacío lo borra). Con
+-- el semáforo en amarillo o rojo tiene que quedar una explicación, sea la
+-- que ya estaba o la nueva.
+--
+-- Todas las validaciones corren antes de escribir: una edición rechazada no
+-- toca ni el check-in ni el KR.
 -- ------------------------------------------------------------
 create or replace function editar_check_in(
   p_check_in uuid,
@@ -196,8 +230,9 @@ set search_path = public
 as $$
 declare
   v_check_in check_ins;
+  v_comentario text;
 begin
-  if p_valor is null then
+  if not avance_finito(p_valor) then
     raise exception 'checkin_valor_invalido';
   end if;
   if p_estado is null or p_estado not in ('verde', 'amarillo', 'rojo') then
@@ -206,10 +241,15 @@ begin
 
   v_check_in := check_in_corregible(p_check_in);
 
+  v_comentario := nullif(btrim(coalesce(p_comentario, v_check_in.comentario_bloqueos, '')), '');
+  if p_estado in ('amarillo', 'rojo') and v_comentario is null then
+    raise exception 'checkin_falta_explicacion';
+  end if;
+
   update check_ins
   set valor_registrado = p_valor,
       estado_semaforo = p_estado,
-      comentario_bloqueos = nullif(btrim(coalesce(p_comentario, '')), ''),
+      comentario_bloqueos = v_comentario,
       editado_at = now()
   where id = v_check_in.id;
 
