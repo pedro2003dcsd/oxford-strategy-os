@@ -112,11 +112,11 @@ export async function editarCheckIn(
 
   const valorRaw = formData.get("valor_registrado");
   const estado = String(formData.get("estado_semaforo") ?? "");
-  // El comentario viaja tal cual quedó en el formulario, que arranca con el
-  // que ya tenía el check-in. Si el campo no viene, va null y la base
-  // conserva el existente: editar nunca borra un comentario por omisión.
-  const comentarioRaw = formData.get("comentario_bloqueos");
-  const comentario = comentarioRaw === null ? null : String(comentarioRaw).trim();
+  // Un comentario nuevo reemplaza al anterior. Si el campo llega vacío va
+  // null, y la base conserva el que ya tenía el check-in: editar nunca borra
+  // un comentario. Si hace falta una explicación (amarillo o rojo) y no hay
+  // ninguna, lo rechaza editar_check_in, que es la que conoce la existente.
+  const comentario = String(formData.get("comentario_bloqueos") ?? "").trim() || null;
 
   const motivo = motivoCorreccionInvalida({ valor: valorRaw, estado, comentario });
   if (motivo) return { error: motivo };

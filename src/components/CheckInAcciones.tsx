@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { startTransition, useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   borrarCheckIn,
@@ -133,20 +133,26 @@ function EditarCheckInForm({
   onDone: () => void;
   onActualizar: () => void;
 }) {
-  // Controlados y no `defaultValue`: useActionState resetea el formulario
-  // cuando la acción termina, también si devolvió error, y con campos no
-  // controlados eso borra lo que la persona acababa de corregir. El
-  // comentario arranca con el que ya tenía el check-in: editar el valor o el
-  // semáforo no lo toca.
+  // Campos controlados, y el envío por onSubmit en vez de `action={...}`:
+  // con `action`, React resetea el formulario cada vez que la acción
+  // termina, también cuando devolvió un error, y los radio vuelven al
+  // semáforo original. Así un rechazo no borra lo que la persona corrigió.
+  // El comentario arranca con el que ya tenía el check-in.
   const [valor, setValor] = useState(String(checkIn.valor_registrado));
   const [estado, setEstado] = useState<Semaforo>(checkIn.estado_semaforo);
   const [comentario, setComentario] = useState(checkIn.comentario_bloqueos ?? "");
   const pideExplicacion = estado === "amarillo" || estado === "rojo";
 
+  // Editar nunca borra un comentario: si el campo queda vacío se conserva el
+  // que ya tenía, y eso es lo que cuenta como explicación en amarillo o rojo.
+  const comentarioActual = checkIn.comentario_bloqueos?.trim() ?? "";
+  const conservaElActual = comentario.trim() === "" && comentarioActual !== "";
+  const explicacion = comentario.trim() || comentarioActual;
+
   const [state, formAction, pending] = useActionState<CheckInState, FormData>(
     async (prev, formData) => {
       // Mismo chequeo que hace el servidor, para avisar sin ir y volver.
-      const motivo = motivoCorreccionInvalida({ valor, estado, comentario });
+      const motivo = motivoCorreccionInvalida({ valor, estado, comentario: explicacion });
       if (motivo) return { error: motivo };
 
       const result = await editarCheckIn(checkIn.kr_id, checkIn.id, prev, formData);
@@ -157,7 +163,15 @@ function EditarCheckInForm({
   );
 
   return (
-    <form action={formAction} noValidate className="space-y-3">
+    <form
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        const datos = new FormData(e.currentTarget);
+        startTransition(() => formAction(datos));
+      }}
+      className="space-y-3"
+    >
       <div className="space-y-1">
         <label className={labelClass}>Valor registrado</label>
         <input
@@ -195,11 +209,16 @@ function EditarCheckInForm({
         <textarea
           name="comentario_bloqueos"
           rows={2}
-          required={pideExplicacion}
+          required={pideExplicacion && !comentarioActual}
           value={comentario}
           onChange={(e) => setComentario(e.target.value)}
           className={inputClass}
         />
+        {conservaElActual && (
+          <p className="text-xs text-tenue">
+            Vacío: se conserva el comentario actual («{comentarioActual}»).
+          </p>
+        )}
       </div>
       <p className="text-xs text-tenue">
         El avance y el semáforo del KR pasan a ser los que guardes acá.

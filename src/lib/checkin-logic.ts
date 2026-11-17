@@ -38,9 +38,10 @@ export function avanceValido(raw: unknown): number | null {
  * bien. Lo usan el formulario, para avisar antes de enviar, y la acción del
  * servidor. La base vuelve a validar lo mismo en editar_check_in (0019).
  *
- * `comentario` es el texto con el que quedaría el check-in. Null significa
- * "no se envió": se conserva el que ya tenía, y si hace falta una explicación
- * lo decide la base, que es la que lo conoce. */
+ * `comentario` es la explicación con la que quedaría el check-in: la nueva
+ * si se escribió una o, si el campo quedó vacío, la que ya tenía (editar
+ * nunca borra un comentario). Null significa "no se sabe": lo decide la
+ * base, que es la que conoce el comentario existente. */
 export function motivoCorreccionInvalida(c: {
   valor: unknown;
   estado: string;

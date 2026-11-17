@@ -36,8 +36,9 @@
 --   - Los KR de hitos quedan afuera: el check-in tilda los hitos en la lista
 --     y eso no se deshace.
 --   - Al editar, el comentario que ya tenía el check-in se conserva salvo que
---     se mande otro. Y si el semáforo queda en amarillo o rojo tiene que
---     haber una explicación: sin ella la edición se rechaza.
+--     se escriba otro: un campo vacío no lo borra. Y si el semáforo queda en
+--     amarillo o rojo tiene que haber una explicación: sin ella la edición
+--     se rechaza.
 --   - El avance tiene que ser un número finito, al cargar y al editar.
 --     `numeric` acepta NaN e Infinity, y uno de esos en un check-in pasaría
 --     derecho al avance del KR.
@@ -209,10 +210,10 @@ revoke execute on function check_in_corregible(uuid) from public, anon, authenti
 -- ------------------------------------------------------------
 -- Editar el último check-in. El KR toma los valores corregidos.
 --
--- El comentario: si p_comentario viene nulo se conserva el que ya tenía el
--- check-in; si viene un texto, lo reemplaza (un texto vacío lo borra). Con
--- el semáforo en amarillo o rojo tiene que quedar una explicación, sea la
--- que ya estaba o la nueva.
+-- El comentario: si p_comentario trae texto, reemplaza al que tenía el
+-- check-in; si viene nulo, vacío o solo con espacios, se conserva el que ya
+-- estaba. Editar nunca borra un comentario. Con el semáforo en amarillo o
+-- rojo tiene que quedar una explicación, sea la que ya estaba o la nueva.
 --
 -- Todas las validaciones corren antes de escribir: una edición rechazada no
 -- toca ni el check-in ni el KR.
@@ -241,7 +242,10 @@ begin
 
   v_check_in := check_in_corregible(p_check_in);
 
-  v_comentario := nullif(btrim(coalesce(p_comentario, v_check_in.comentario_bloqueos, '')), '');
+  v_comentario := coalesce(
+    nullif(btrim(coalesce(p_comentario, '')), ''),
+    nullif(btrim(coalesce(v_check_in.comentario_bloqueos, '')), '')
+  );
   if p_estado in ('amarillo', 'rojo') and v_comentario is null then
     raise exception 'checkin_falta_explicacion';
   end if;
