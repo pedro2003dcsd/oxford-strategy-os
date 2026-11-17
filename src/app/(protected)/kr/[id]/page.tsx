@@ -5,11 +5,14 @@ import type { CheckIn, KeyResultCompleto } from "@/lib/types";
 import { SemaforoBadge } from "@/components/SemaforoBadge";
 import { TrendChart } from "@/components/TrendChart";
 import { CheckInForm } from "@/components/CheckInForm";
+import { CheckInAcciones } from "@/components/CheckInAcciones";
 import { HitosList } from "@/components/HitosList";
 import { MargenForm } from "@/components/MargenForm";
 import { IniciativasPanel } from "@/components/IniciativasPanel";
 import { HistorialLista } from "@/components/HistorialEdicion";
 import { historialDe } from "@/lib/historial-server";
+import { perfilActual } from "@/lib/perfil";
+import { checkInCorregible, ultimoCheckIn } from "@/lib/checkin-logic";
 import { formatValor, hasAlertaRentabilidad, isKrCumplido } from "@/lib/kr-logic";
 
 export default async function KrDetailPage({
@@ -49,6 +52,23 @@ export default async function KrDetailPage({
 
   const historial = (checkIns ?? []) as CheckIn[];
   const cambios = await historialDe({ krId: id });
+
+  // El único check-in que se puede corregir: el más reciente, y solo para
+  // quien lo cargó. Acá se decide si se muestran los botones; la base lo
+  // vuelve a verificar al guardar o borrar.
+  const perfil = await perfilActual();
+  const corregible = checkInCorregible(krCompleto, historial, perfil);
+  // A qué vuelve el KR si se borra: al check-in anterior o, si era el único,
+  // al estado que quedó guardado justo antes de esa carga.
+  let restaura: string | null = null;
+  if (corregible) {
+    const anterior = ultimoCheckIn(historial.filter((c) => c.id !== corregible.id));
+    const valor = anterior ? anterior.valor_registrado : corregible.valor_previo;
+    const semaforo = anterior ? anterior.estado_semaforo : corregible.semaforo_previo;
+    if (valor !== null && semaforo !== null) {
+      restaura = `${formatValor(valor, krCompleto.tipo_medicion)} y semáforo ${semaforo}`;
+    }
+  }
   const alerta = hasAlertaRentabilidad(krCompleto);
   const cumplido = isKrCumplido(krCompleto);
   const okrTrim = krCompleto.okr_trimestral;
@@ -151,11 +171,17 @@ export default async function KrDetailPage({
                       {c.comentario_bloqueos && (
                         <p className="text-xs text-tenue">{c.comentario_bloqueos}</p>
                       )}
+                      {corregible?.id === c.id && (
+                        <div className="mt-1">
+                          <CheckInAcciones checkIn={c} restaura={restaura} />
+                        </div>
+                      )}
                     </div>
                     <div className="flex flex-col items-end gap-1 whitespace-nowrap">
                       <SemaforoBadge estado={c.estado_semaforo} compact />
                       <span className="text-xs text-tenue">
                         {new Date(c.creado_at).toLocaleDateString("es-AR")}
+                        {c.editado_at && " · editado"}
                       </span>
                     </div>
                   </li>
